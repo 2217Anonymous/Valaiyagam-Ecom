@@ -5,10 +5,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, roles, users
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.init_db import seed_database
+from app.modules.iam.api import roles
+from app.modules.identity.api import auth, users
 from app.utils.exceptions import AppError
 
 

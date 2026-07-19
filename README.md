@@ -81,3 +81,15 @@ pip install -r requirements.txt
 alembic upgrade head
 uvicorn app.main:app --reload
 ```
+
+## Client materials
+
+| File | Purpose |
+|---|---|
+| `docs/ECOM_ARCHITECTURE_AND_TIMELINE.md` | Full architecture, integrations, and 16-week timeline |
+| `docs/SECURITY_ARCHITECTURE.md` | Current security controls + improvement roadmap |
+| `docs/SSO_LOGGING_MICROSERVICES_ARCHITECTURE.md` | SSO + password, logging, microservice split plan |
+| `docs/MODULAR_MONOLITH_STRUCTURE.md` | Current-to-target domain folder migration plan |
+| `docs/Valaiyagam_Client_Presentation.pptx` | Client PPT (UI standards, payment, courier, tracking) |
+| `docs/PROJECT_TRACKING.xlsx` | Story tracker with IDs, dates, branches, and workflow |
+| `docs/generate_client_materials.py` | Regenerates the PPT and Excel files |
