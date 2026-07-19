@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f1f5f9;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.glass-panel {
+  border: 1px solid rgb(255 255 255 / 0.85);
+  border-radius: 1.5rem;
+  background: rgb(255 255 255 / 0.58);
+  box-shadow: 0 16px 50px rgb(71 85 105 / 0.1);
+  backdrop-filter: blur(24px);
+}
+
+.form-input {
+  width: 100%;
+  border: 1px solid rgb(203 213 225 / 0.9);
+  border-radius: 0.75rem;
+  background: rgb(255 255 255 / 0.72);
+  padding: 0.75rem 1rem;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 160ms, box-shadow 160ms, background 160ms;
+}
+
+.form-input:focus {
+  border-color: #14b8a6;
+  background: white;
+  box-shadow: 0 0 0 4px rgb(20 184 166 / 0.12);
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, #14b8a6, #0891b2);
+  padding: 0.7rem 1.1rem;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgb(20 184 166 / 0.2);
+  transition: transform 160ms, box-shadow 160ms, opacity 160ms;
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgb(20 184 166 / 0.26);
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+}
+
+.glass-secondary-button {
+  border: 1px solid rgb(203 213 225 / 0.85);
+  border-radius: 0.75rem;
+  background: rgb(255 255 255 / 0.72);
+  padding: 0.7rem 1.1rem;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 160ms, color 160ms;
+}
+
+.glass-secondary-button:hover {
+  background: white;
+  color: #0f172a;
+}
+
+.icon-button {
+  border-radius: 0.65rem;
+  padding: 0.6rem;
+  color: #64748b;
+  transition: background 160ms, color 160ms;
+}
+
+.icon-button:hover {
+  background: rgb(255 255 255 / 0.9);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
