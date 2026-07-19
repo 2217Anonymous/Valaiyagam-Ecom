@@ -37,16 +37,23 @@ initially empty.
 
 ```text
 backend/app/
-├── api/             # Dependencies and HTTP routes
-├── constants/       # Role and application constants
+├── modules/
+│   ├── identity/    # Authentication and users
+│   ├── iam/         # Roles and authorization
+│   ├── catalog/
+│   ├── orders/
+│   ├── payments/
+│   └── fulfillment/
 ├── core/            # Settings, database, security, initialization
-├── models/          # SQLAlchemy database models
-├── repositories/    # Database access
-├── schemas/         # Pydantic request/response models
-├── services/        # Business rules
+├── shared/          # Planned shared infrastructure
 ├── utils/           # Shared errors and helpers
 └── main.py          # FastAPI application
 ```
+
+`backend/Microservices/` is a parallel extraction workspace containing a copy of
+the current app, ten service boundaries, Clean Architecture layer folders,
+contracts, platform folders, and a service catalog. It is not connected to the
+current runtime yet.
 
 Database files:
 

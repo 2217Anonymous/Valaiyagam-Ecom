@@ -1,0 +1,25 @@
+# Catalog Module
+
+Owns everything required to describe and sell products.
+
+## Responsibilities
+
+- Categories and collections
+- Products, variants, attributes, pricing, and SKUs
+- Product media and publish status
+- Inventory balances and stock movements
+- Low-stock rules and availability queries
+
+## Owned data
+
+`categories`, `products`, `product_variants`, `product_media`,
+`inventory_items`, `stock_movements`
+
+## Public contracts
+
+- Product administration commands
+- Public catalog queries
+- `check_availability(variant_id, quantity)`
+- `reserve_stock(...)` and `release_stock(...)`
+
+Publishes `product.published`, `stock.low`, and `stock.changed` events.

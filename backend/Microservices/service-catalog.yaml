@@ -1,0 +1,67 @@
+version: 1
+services:
+  api-gateway:
+    port: 8080
+    database: none
+    exposure: public
+    first_extraction_wave: true
+  identity-service:
+    port: 8101
+    database: identity_db
+    exposure: internal-through-gateway
+    first_extraction_wave: true
+  iam-service:
+    port: 8102
+    database: iam_db
+    exposure: internal
+    first_extraction_wave: false
+    note: May initially deploy with identity-service.
+  catalog-service:
+    port: 8103
+    database: catalog_db
+    exposure: internal-through-gateway
+    first_extraction_wave: false
+  order-service:
+    port: 8104
+    database: order_db
+    exposure: internal-through-gateway
+    first_extraction_wave: false
+  payment-service:
+    port: 8105
+    database: payment_db
+    exposure: gateway-and-provider-webhooks
+    first_extraction_wave: true
+  fulfillment-service:
+    port: 8106
+    database: fulfillment_db
+    exposure: gateway-and-courier-webhooks
+    first_extraction_wave: true
+  notification-service:
+    port: 8107
+    database: notification_db
+    exposure: internal
+    first_extraction_wave: false
+  reporting-service:
+    port: 8108
+    database: reporting_db
+    exposure: internal-through-gateway
+    first_extraction_wave: false
+  settings-service:
+    port: 8109
+    database: settings_db
+    exposure: internal-through-gateway
+    first_extraction_wave: false
+
+platform:
+  message_broker:
+    recommended_initial: RabbitMQ
+  session_cache:
+    recommended_initial: Redis
+  identity_provider:
+    development: Keycloak
+    production: Microsoft Entra ID, Google, or managed Keycloak
+  observability:
+    logs: Loki
+    metrics: Prometheus
+    dashboards: Grafana
+    traces: Tempo
