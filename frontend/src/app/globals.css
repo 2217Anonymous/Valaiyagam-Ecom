@@ -25,6 +25,38 @@ body {
   backdrop-filter: blur(24px);
 }
 
+/* Full-bleed content surface (no boxed card look) */
+.surface-panel {
+  width: 100%;
+  border: 1px solid rgb(226 232 240);
+  background: white;
+}
+
+.nav-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 160ms, color 160ms;
+}
+
+.nav-item-active {
+  background: linear-gradient(90deg, #14b8a6, #0891b2);
+  color: white;
+}
+
+.nav-item-idle {
+  color: #64748b;
+}
+
+.nav-item-idle:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
 .form-input {
   width: 100%;
   border: 1px solid rgb(203 213 225 / 0.9);
@@ -36,29 +68,150 @@ body {
   transition: border-color 160ms, box-shadow 160ms, background 160ms;
 }
 
+.form-input-sm {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f3f4f6;
+  padding: 0.55rem 1rem;
+  color: #0f172a;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 160ms, box-shadow 160ms, background 160ms;
+}
+
+.form-input-sm:focus,
 .form-input:focus {
   border-color: #14b8a6;
   background: white;
-  box-shadow: 0 0 0 4px rgb(20 184 166 / 0.12);
+  box-shadow: 0 0 0 3px rgb(20 184 166 / 0.12);
+}
+
+.table-search {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f3f4f6;
+  padding: 0.65rem 1rem 0.65rem 2.5rem;
+  color: #0f172a;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.table-search:focus {
+  border-color: #14b8a6;
+  background: white;
+  box-shadow: 0 0 0 3px rgb(20 184 166 / 0.12);
+}
+
+.table-filter {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f3f4f6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.9rem center;
+  padding: 0.65rem 2.2rem 0.65rem 1rem;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+}
+
+.table-filter:focus {
+  border-color: #14b8a6;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgb(20 184 166 / 0.12);
+}
+
+.table-card {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.table-head {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  color: #0f172a;
+}
+
+.table-th {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  white-space: nowrap;
+  color: #0f172a;
+}
+
+.table-checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #0d9488;
+  cursor: pointer;
+}
+
+.page-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  color: #64748b;
+  transition: background 160ms, color 160ms;
+}
+
+.page-nav-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.35;
+}
+
+.page-number-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  transition: background 160ms, color 160ms;
+}
+
+.page-number-btn:hover {
+  background: #f1f5f9;
+}
+
+.page-number-btn-active {
+  background: #ccfbf1;
+  color: #0f766e;
 }
 
 .primary-button {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(90deg, #14b8a6, #0891b2);
-  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  background: #0f766e;
+  padding: 0.7rem 1.15rem;
   color: white;
   font-size: 0.875rem;
   font-weight: 700;
-  box-shadow: 0 8px 24px rgb(20 184 166 / 0.2);
-  transition: transform 160ms, box-shadow 160ms, opacity 160ms;
+  box-shadow: 0 8px 20px rgb(15 118 110 / 0.18);
+  transition: transform 160ms, box-shadow 160ms, opacity 160ms, background 160ms;
 }
 
 .primary-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgb(20 184 166 / 0.26);
+  background: #0d9488;
+  box-shadow: 0 10px 24px rgb(15 118 110 / 0.22);
 }
 
 .primary-button:disabled {
@@ -82,8 +235,8 @@ body {
 }
 
 .icon-button {
-  border-radius: 0.65rem;
-  padding: 0.6rem;
+  border-radius: 0.5rem;
+  padding: 0.4rem;
   color: #64748b;
   transition: background 160ms, color 160ms;
 }

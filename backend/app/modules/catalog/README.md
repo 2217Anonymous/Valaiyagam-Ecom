@@ -23,3 +23,8 @@ Owns everything required to describe and sell products.
 - `reserve_stock(...)` and `release_stock(...)`
 
 Publishes `product.published`, `stock.low`, and `stock.changed` events.
+
+## Implementation status
+
+- Categories CRUD (flat + nested via `parent_id`, `is_active`, slug, sort order): done
+- Products, variants, media, inventory: planned

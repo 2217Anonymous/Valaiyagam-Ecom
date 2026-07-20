@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
-  LayoutDashboard,
+  Eye,
+  FolderTree,
   LogOut,
   Pencil,
   Plus,
@@ -14,6 +15,19 @@ import {
   Users,
 } from "lucide-react";
 
+import {
+  FilterSelect,
+  SelectTd,
+  SelectTh,
+  SelectionBar,
+  SortableTh,
+  StaticTh,
+  TablePagination,
+  TableToolbar,
+} from "@/components/DataTableControls";
+import { useRowSelection } from "@/hooks/useRowSelection";
+import { useTableState } from "@/hooks/useTableState";
+import { toastError, toastSuccess } from "@/lib/toast";
 import type { Role, User } from "@/lib/types";
 import type { RootState } from "@/store";
 import { logout } from "@/store/authSlice";
@@ -31,9 +45,10 @@ import {
   updateUser,
 } from "@/store/usersSlice";
 
+import { CategoriesPanel } from "./CategoriesPanel";
 import { ConfirmDialog, Modal } from "./Modal";
 
-type Tab = "users" | "roles";
+type Tab = "users" | "roles" | "categories";
 const protectedRoles = new Set(["admin", "manager", "viewer"]);
 
 export function AdminDashboard() {
@@ -65,6 +80,12 @@ export function AdminDashboard() {
           <NavButton active={tab === "roles"} onClick={() => setTab("roles")}>
             <ShieldCheck size={18} /> Roles
           </NavButton>
+          <NavButton
+            active={tab === "categories"}
+            onClick={() => setTab("categories")}
+          >
+            <FolderTree size={18} /> Categories
+          </NavButton>
         </nav>
         <div className="mt-auto rounded-2xl border border-white bg-white/70 p-4 shadow-sm">
           <p className="truncate text-sm font-semibold">{currentUser?.full_name}</p>
@@ -79,10 +100,12 @@ export function AdminDashboard() {
       </aside>
 
       <div className="relative pb-24 lg:pl-[300px] lg:pb-0">
-        <header className="sticky top-0 z-20 border-b border-white/70 bg-white/55 px-4 py-4 backdrop-blur-2xl sm:px-6 lg:px-10">
-          <div className="mx-auto flex max-w-7xl items-center justify-between">
+        <header className="sticky top-0 z-20 border-b border-white/70 bg-white/55 px-5 py-5 backdrop-blur-2xl">
+          <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="lg:hidden"><Brand compact /></div>
+              <div className="lg:hidden">
+                <Brand compact />
+              </div>
               <div className="hidden lg:block">
                 <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-teal-600">
                   <Sparkles size={14} /> Control center
@@ -100,27 +123,39 @@ export function AdminDashboard() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-10">
-          <div className="mb-6 lg:hidden">
+        <main className="w-full px-5 py-5">
+          <div className="mb-5 lg:hidden">
             <p className="text-sm font-medium text-teal-600">Administration</p>
             <h1 className="text-2xl font-bold">
-              {tab === "users" ? "User management" : "Role management"}
+              {tab === "users"
+                ? "User management"
+                : tab === "roles"
+                  ? "Role management"
+                  : "Category management"}
             </h1>
           </div>
           {tab === "users" ? (
             <UsersPanel usersState={usersState} roles={rolesState.items} />
-          ) : (
+          ) : tab === "roles" ? (
             <RolesPanel />
+          ) : (
+            <CategoriesPanel />
           )}
         </main>
       </div>
 
-      <nav className="fixed inset-x-4 bottom-4 z-40 grid grid-cols-2 rounded-2xl border border-white/80 bg-white/75 p-2 shadow-[0_16px_50px_rgba(71,85,105,0.2)] backdrop-blur-2xl lg:hidden">
+      <nav className="fixed inset-x-4 bottom-4 z-40 grid grid-cols-3 rounded-2xl border border-white/80 bg-white/75 p-2 shadow-[0_16px_50px_rgba(71,85,105,0.2)] backdrop-blur-2xl lg:hidden">
         <NavButton active={tab === "users"} onClick={() => setTab("users")}>
           <Users size={18} /> Users
         </NavButton>
         <NavButton active={tab === "roles"} onClick={() => setTab("roles")}>
           <ShieldCheck size={18} /> Roles
+        </NavButton>
+        <NavButton
+          active={tab === "categories"}
+          onClick={() => setTab("categories")}
+        >
+          <FolderTree size={18} /> Categories
         </NavButton>
       </nav>
     </div>
@@ -155,7 +190,7 @@ function NavButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition lg:justify-start ${
+      className={`flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition lg:justify-start ${
         active
           ? "bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/20"
           : "text-slate-500 hover:bg-white/80 hover:text-slate-900"
@@ -176,19 +211,99 @@ function UsersPanel({
   const dispatch = useAppDispatch();
   const [formUser, setFormUser] = useState<User | "new" | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
+    "all",
+  );
+
+  const matchesSearch = useCallback((user: User, query: string) => {
+    const haystack = [
+      user.full_name,
+      user.email,
+      ...user.roles.map((role) => role.name),
+    ]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  }, []);
+
+  const getSortValue = useCallback((user: User, key: "name" | "email" | "roles" | "status") => {
+    switch (key) {
+      case "name":
+        return user.full_name;
+      case "email":
+        return user.email;
+      case "roles":
+        return user.roles.map((role) => role.name).join(", ");
+      case "status":
+        return user.is_active;
+      default:
+        return user.full_name;
+    }
+  }, []);
+
+  const filteredByStatus = usersState.items.filter((user) => {
+    if (statusFilter === "active") return user.is_active;
+    if (statusFilter === "inactive") return !user.is_active;
+    return true;
+  });
+
+  const table = useTableState<User, "name" | "email" | "roles" | "status">({
+    rows: filteredByStatus,
+    initialSort: { key: "name", direction: "asc" },
+    getSortValue,
+    matchesSearch,
+  });
+
+  const getUserId = useCallback((user: User) => user.id, []);
+  const selection = useRowSelection(table.pageRows, getUserId);
+
+  useEffect(() => {
+    if (usersState.error) {
+      toastError(dispatch, "Request failed", usersState.error);
+    }
+  }, [usersState.error, dispatch]);
 
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
     const result = await dispatch(deleteUser(deleteTarget.id));
     setDeleting(false);
-    if (deleteUser.fulfilled.match(result)) setDeleteTarget(null);
+    if (deleteUser.fulfilled.match(result)) {
+      toastSuccess(dispatch, "User deleted", `${deleteTarget.full_name} was removed.`);
+      setDeleteTarget(null);
+      selection.clear();
+    } else {
+      toastError(
+        dispatch,
+        "Could not delete user",
+        result.error?.message ?? "Please try again.",
+      );
+    }
+  }
+
+  async function confirmBulkDelete() {
+    if (selection.selectedIds.length === 0) return;
+    setDeleting(true);
+    let ok = 0;
+    for (const id of selection.selectedIds) {
+      const result = await dispatch(deleteUser(id));
+      if (deleteUser.fulfilled.match(result)) ok += 1;
+    }
+    setDeleting(false);
+    setBulkDeleteOpen(false);
+    selection.clear();
+    if (ok > 0) {
+      toastSuccess(dispatch, "Users deleted", `${ok} user(s) removed.`);
+    } else {
+      toastError(dispatch, "Could not delete users", "Please try again.");
+    }
   }
 
   return (
     <>
-      <section className="mb-6 grid gap-4 sm:grid-cols-3">
+      <section className="mb-5 grid w-full gap-4 sm:grid-cols-3">
         <Stat label="Total users" value={usersState.items.length} icon={<Users />} color="cyan" />
         <Stat
           label="Active users"
@@ -199,38 +314,118 @@ function UsersPanel({
         <Stat label="Available roles" value={roles.length} icon={<ShieldCheck />} color="violet" />
       </section>
 
-      <section className="glass-panel overflow-hidden">
+      <section className="table-card">
         <PanelHeader
-          title="User management"
-          description="Create, edit and control role-based user access"
+          title="User List"
           action={
             <button onClick={() => setFormUser("new")} className="primary-button">
-              <Plus size={17} /> Add user
+              <Plus size={17} /> Create User
             </button>
           }
         />
-        {usersState.error && <ErrorBanner message={usersState.error} />}
+        <TableToolbar
+          search={table.search}
+          onSearchChange={table.setSearch}
+          searchPlaceholder="Search..."
+          filters={
+            <>
+              <FilterSelect
+                aria-label="Status filter"
+                value={statusFilter}
+                onChange={(value) => {
+                  setStatusFilter(value as "all" | "active" | "inactive");
+                  table.setPage(1);
+                }}
+              >
+                <option value="all">Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </FilterSelect>
+              <FilterSelect
+                aria-label="Rows per page"
+                value={String(table.pageSize)}
+                onChange={(value) => table.setPageSize(Number(value))}
+              >
+                {table.pageSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size} / page
+                  </option>
+                ))}
+              </FilterSelect>
+            </>
+          }
+        />
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full text-left text-sm">
-            <thead className="border-y border-white/80 bg-white/35 text-xs uppercase tracking-wider text-slate-500">
+        <SelectionBar
+          count={selection.selectedCount}
+          onClear={selection.clear}
+          onDelete={() => setBulkDeleteOpen(true)}
+          deleting={deleting}
+        />
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="table-head">
               <tr>
-                <th className="px-6 py-4">User</th>
-                <th className="px-6 py-4">Roles</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <SelectTh
+                  checked={selection.allSelected}
+                  indeterminate={selection.someSelected}
+                  onChange={selection.togglePage}
+                />
+                <StaticTh label="ID" />
+                <SortableTh
+                  label="User"
+                  sortKey="name"
+                  activeKey={table.sort.key}
+                  direction={table.sort.direction}
+                  onSort={table.toggleSort}
+                />
+                <SortableTh
+                  label="Email"
+                  sortKey="email"
+                  activeKey={table.sort.key}
+                  direction={table.sort.direction}
+                  onSort={table.toggleSort}
+                />
+                <SortableTh
+                  label="Roles"
+                  sortKey="roles"
+                  activeKey={table.sort.key}
+                  direction={table.sort.direction}
+                  onSort={table.toggleSort}
+                />
+                <SortableTh
+                  label="Status"
+                  sortKey="status"
+                  activeKey={table.sort.key}
+                  direction={table.sort.direction}
+                  onSort={table.toggleSort}
+                />
+                <StaticTh label="Action" align="right" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/80">
-              {usersState.items.map((user) => (
-                <tr key={user.id} className="transition hover:bg-white/45">
-                  <td className="px-6 py-4"><UserIdentity user={user} /></td>
-                  <td className="px-6 py-4"><RoleBadges roles={user.roles} /></td>
-                  <td className="px-6 py-4"><StatusBadge active={user.is_active} /></td>
-                  <td className="px-6 py-4">
+            <tbody>
+              {table.pageRows.map((user) => (
+                <tr
+                  key={user.id}
+                  className="border-b border-slate-100 transition hover:bg-slate-50/80"
+                >
+                  <SelectTd
+                    checked={selection.isSelected(user.id)}
+                    onChange={() => selection.toggleOne(user.id)}
+                    label={`Select ${user.full_name}`}
+                  />
+                  <td className="px-4 py-3.5 text-slate-500">#{user.id}</td>
+                  <td className="px-4 py-3.5"><UserIdentity user={user} /></td>
+                  <td className="px-4 py-3.5 text-slate-600">{user.email}</td>
+                  <td className="px-4 py-3.5"><RoleBadges roles={user.roles} /></td>
+                  <td className="px-4 py-3.5"><StatusBadge active={user.is_active} /></td>
+                  <td className="px-4 py-3.5">
                     <ActionButtons
+                      viewLabel={`View ${user.full_name}`}
                       editLabel={`Edit ${user.full_name}`}
                       deleteLabel={`Delete ${user.full_name}`}
+                      onView={() => setFormUser(user)}
                       onEdit={() => setFormUser(user)}
                       onDelete={() => setDeleteTarget(user)}
                     />
@@ -241,29 +436,23 @@ function UsersPanel({
           </table>
         </div>
 
-        <div className="grid gap-3 p-4 md:hidden">
-          {usersState.items.map((user) => (
-            <article key={user.id} className="rounded-2xl border border-white/90 bg-white/55 p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <UserIdentity user={user} />
-                <StatusBadge active={user.is_active} />
-              </div>
-              <div className="mt-4"><RoleBadges roles={user.roles} /></div>
-              <div className="mt-4 border-t border-slate-200/70 pt-3">
-                <ActionButtons
-                  editLabel={`Edit ${user.full_name}`}
-                  deleteLabel={`Delete ${user.full_name}`}
-                  onEdit={() => setFormUser(user)}
-                  onDelete={() => setDeleteTarget(user)}
-                />
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {!usersState.loading && usersState.items.length === 0 && (
-          <EmptyState message="No users found. Create your first user." />
+        {!usersState.loading && table.filteredCount === 0 && (
+          <EmptyState
+            message={
+              usersState.items.length === 0
+                ? "No users found. Create your first user."
+                : "No users match your search or filters."
+            }
+          />
         )}
+
+        <TablePagination
+          page={table.page}
+          pageCount={table.pageCount}
+          onPageChange={table.setPage}
+          filteredCount={table.filteredCount}
+          pageSize={table.pageSize}
+        />
       </section>
 
       <UserFormModal
@@ -278,6 +467,14 @@ function UsersPanel({
         busy={deleting}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => void confirmDelete()}
+      />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Delete selected users?"
+        message={`This will permanently delete ${selection.selectedCount} selected user(s).`}
+        busy={deleting}
+        onCancel={() => setBulkDeleteOpen(false)}
+        onConfirm={() => void confirmBulkDelete()}
       />
     </>
   );
@@ -349,7 +546,20 @@ function UserFormModal({
       result &&
       (createUser.fulfilled.match(result) || updateUser.fulfilled.match(result))
     ) {
+      toastSuccess(
+        dispatch,
+        editing ? "User updated" : "User created",
+        editing
+          ? `${form.full_name} was saved.`
+          : `${form.full_name} was added.`,
+      );
       onClose();
+    } else if (result) {
+      toastError(
+        dispatch,
+        editing ? "Could not update user" : "Could not create user",
+        result.error?.message ?? "Please try again.",
+      );
     }
   }
 
@@ -417,51 +627,255 @@ function RolesPanel() {
   const rolesState = useAppSelector((state) => state.roles);
   const [formRole, setFormRole] = useState<Role | "new" | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<"all" | "system" | "custom">(
+    "all",
+  );
+
+  const matchesSearch = useCallback((role: Role, query: string) => {
+    return `${role.name} ${role.description ?? ""}`.toLowerCase().includes(query);
+  }, []);
+
+  const getSortValue = useCallback((role: Role, key: "name" | "description" | "type") => {
+    switch (key) {
+      case "name":
+        return role.name;
+      case "description":
+        return role.description ?? "";
+      case "type":
+        return protectedRoles.has(role.name) ? 0 : 1;
+      default:
+        return role.name;
+    }
+  }, []);
+
+  const filteredByType = rolesState.items.filter((role) => {
+    const isSystem = protectedRoles.has(role.name);
+    if (typeFilter === "system") return isSystem;
+    if (typeFilter === "custom") return !isSystem;
+    return true;
+  });
+
+  const table = useTableState<Role, "name" | "description" | "type">({
+    rows: filteredByType,
+    initialSort: { key: "name", direction: "asc" },
+    getSortValue,
+    matchesSearch,
+    initialPageSize: 10,
+  });
+
+  const getRoleId = useCallback((role: Role) => role.id, []);
+  const selection = useRowSelection(table.pageRows, getRoleId);
+
+  useEffect(() => {
+    if (rolesState.error) {
+      toastError(dispatch, "Request failed", rolesState.error);
+    }
+  }, [rolesState.error, dispatch]);
 
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
     const result = await dispatch(deleteRole(deleteTarget.id));
     setDeleting(false);
-    if (deleteRole.fulfilled.match(result)) setDeleteTarget(null);
+    if (deleteRole.fulfilled.match(result)) {
+      toastSuccess(dispatch, "Role deleted", `${deleteTarget.name} was removed.`);
+      setDeleteTarget(null);
+      selection.clear();
+    } else {
+      toastError(
+        dispatch,
+        "Could not delete role",
+        result.error?.message ?? "Please try again.",
+      );
+    }
+  }
+
+  async function confirmBulkDelete() {
+    const ids = selection.selectedIds.filter((id) => {
+      const role = rolesState.items.find((item) => item.id === id);
+      return role && !protectedRoles.has(role.name);
+    });
+    if (ids.length === 0) {
+      toastError(dispatch, "Nothing to delete", "System roles cannot be deleted.");
+      setBulkDeleteOpen(false);
+      return;
+    }
+    setDeleting(true);
+    let ok = 0;
+    for (const id of ids) {
+      const result = await dispatch(deleteRole(id));
+      if (deleteRole.fulfilled.match(result)) ok += 1;
+    }
+    setDeleting(false);
+    setBulkDeleteOpen(false);
+    selection.clear();
+    if (ok > 0) {
+      toastSuccess(dispatch, "Roles deleted", `${ok} role(s) removed.`);
+    } else {
+      toastError(dispatch, "Could not delete roles", "Please try again.");
+    }
   }
 
   return (
     <>
-      <section className="glass-panel overflow-hidden">
+      <section className="table-card">
         <PanelHeader
-          title="Roles and permissions"
-          description="Define access groups and keep permissions organized"
+          title="Role List"
           action={
             <button onClick={() => setFormRole("new")} className="primary-button">
-              <Plus size={17} /> Add role
+              <Plus size={17} /> Create Role
             </button>
           }
         />
-        {rolesState.error && <ErrorBanner message={rolesState.error} />}
-        <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-2">
-          {rolesState.items.map((role) => (
-            <article key={role.id} className="rounded-2xl border border-white/90 bg-white/55 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-start justify-between gap-4">
-                <span className="grid size-11 place-items-center rounded-2xl bg-violet-100 text-violet-600">
-                  <ShieldCheck size={21} />
-                </span>
-                <ActionButtons
-                  editLabel={`Edit ${role.name}`}
-                  deleteLabel={`Delete ${role.name}`}
-                  onEdit={() => setFormRole(role)}
-                  onDelete={protectedRoles.has(role.name) ? undefined : () => setDeleteTarget(role)}
+        <TableToolbar
+          search={table.search}
+          onSearchChange={table.setSearch}
+          searchPlaceholder="Search..."
+          filters={
+            <>
+              <FilterSelect
+                aria-label="Role type filter"
+                value={typeFilter}
+                onChange={(value) => {
+                  setTypeFilter(value as "all" | "system" | "custom");
+                  table.setPage(1);
+                }}
+              >
+                <option value="all">Type</option>
+                <option value="system">System</option>
+                <option value="custom">Custom</option>
+              </FilterSelect>
+              <FilterSelect
+                aria-label="Rows per page"
+                value={String(table.pageSize)}
+                onChange={(value) => table.setPageSize(Number(value))}
+              >
+                {table.pageSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size} / page
+                  </option>
+                ))}
+              </FilterSelect>
+            </>
+          }
+        />
+
+        <SelectionBar
+          count={selection.selectedCount}
+          onClear={selection.clear}
+          onDelete={() => setBulkDeleteOpen(true)}
+          deleting={deleting}
+        />
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px] text-left text-sm">
+            <thead className="table-head">
+              <tr>
+                <SelectTh
+                  checked={selection.allSelected}
+                  indeterminate={selection.someSelected}
+                  onChange={selection.togglePage}
                 />
-              </div>
-              <h3 className="mt-4 font-bold capitalize">{role.name.replaceAll("_", " ")}</h3>
-              <p className="mt-1 min-h-10 text-sm leading-5 text-slate-500">{role.description || "No description provided."}</p>
-              {protectedRoles.has(role.name) && (
-                <span className="mt-4 inline-flex rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-600">System role</span>
-              )}
-            </article>
-          ))}
+                <StaticTh label="ID" />
+                <SortableTh
+                  label="Role"
+                  sortKey="name"
+                  activeKey={table.sort.key}
+                  direction={table.sort.direction}
+                  onSort={table.toggleSort}
+                />
+                <SortableTh
+                  label="Description"
+                  sortKey="description"
+                  activeKey={table.sort.key}
+                  direction={table.sort.direction}
+                  onSort={table.toggleSort}
+                />
+                <SortableTh
+                  label="Type"
+                  sortKey="type"
+                  activeKey={table.sort.key}
+                  direction={table.sort.direction}
+                  onSort={table.toggleSort}
+                />
+                <StaticTh label="Action" align="right" />
+              </tr>
+            </thead>
+            <tbody>
+              {table.pageRows.map((role) => (
+                <tr
+                  key={role.id}
+                  className="border-b border-slate-100 transition hover:bg-slate-50/80"
+                >
+                  <SelectTd
+                    checked={selection.isSelected(role.id)}
+                    onChange={() => selection.toggleOne(role.id)}
+                    label={`Select ${role.name}`}
+                  />
+                  <td className="px-4 py-3.5 text-slate-500">#{role.id}</td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <span className="grid size-9 place-items-center rounded-xl bg-violet-100 text-violet-600">
+                        <ShieldCheck size={16} />
+                      </span>
+                      <p className="font-semibold capitalize">
+                        {role.name.replaceAll("_", " ")}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 text-slate-600">
+                    {role.description || "No description provided."}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    {protectedRoles.has(role.name) ? (
+                      <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                        System
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700">
+                        Custom
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <ActionButtons
+                      viewLabel={`View ${role.name}`}
+                      editLabel={`Edit ${role.name}`}
+                      deleteLabel={`Delete ${role.name}`}
+                      onView={() => setFormRole(role)}
+                      onEdit={() => setFormRole(role)}
+                      onDelete={
+                        protectedRoles.has(role.name)
+                          ? undefined
+                          : () => setDeleteTarget(role)
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+
+        {!rolesState.loading && table.filteredCount === 0 && (
+          <EmptyState
+            message={
+              rolesState.items.length === 0
+                ? "No roles found."
+                : "No roles match your search or filters."
+            }
+          />
+        )}
+
+        <TablePagination
+          page={table.page}
+          pageCount={table.pageCount}
+          onPageChange={table.setPage}
+          filteredCount={table.filteredCount}
+          pageSize={table.pageSize}
+        />
       </section>
       <RoleFormModal role={formRole} onClose={() => setFormRole(null)} />
       <ConfirmDialog
@@ -471,6 +885,14 @@ function RolesPanel() {
         busy={deleting}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => void confirmDelete()}
+      />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Delete selected roles?"
+        message={`This will permanently delete ${selection.selectedCount} selected role(s). System roles are skipped.`}
+        busy={deleting}
+        onCancel={() => setBulkDeleteOpen(false)}
+        onConfirm={() => void confirmBulkDelete()}
       />
     </>
   );
@@ -504,7 +926,18 @@ function RoleFormModal({ role, onClose }: { role: Role | "new" | null; onClose: 
       result &&
       (createRole.fulfilled.match(result) || updateRole.fulfilled.match(result))
     ) {
+      toastSuccess(
+        dispatch,
+        editing ? "Role updated" : "Role created",
+        editing ? `${name} was saved.` : `${name} was added.`,
+      );
       onClose();
+    } else if (result) {
+      toastError(
+        dispatch,
+        editing ? "Could not update role" : "Could not create role",
+        result.error?.message ?? "Please try again.",
+      );
     }
   }
 
@@ -523,10 +956,10 @@ function RoleFormModal({ role, onClose }: { role: Role | "new" | null; onClose: 
   );
 }
 
-function PanelHeader({ title, description, action }: { title: string; description: string; action: React.ReactNode }) {
+function PanelHeader({ title, action }: { title: string; description?: string; action: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-      <div><h2 className="text-lg font-bold">{title}</h2><p className="mt-1 text-sm text-slate-500">{description}</p></div>
+    <div className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+      <h2 className="text-lg font-bold text-slate-900">{title}</h2>
       {action}
     </div>
   );
@@ -550,14 +983,59 @@ function RoleBadges({ roles }: { roles: Role[] }) {
 }
 
 function StatusBadge({ active }: { active: boolean }) {
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{active ? "Active" : "Inactive"}</span>;
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+        active
+          ? "bg-teal-50 text-teal-700"
+          : "bg-amber-50 text-amber-700"
+      }`}
+    >
+      {active ? "Active" : "Inactive"}
+    </span>
+  );
 }
 
-function ActionButtons({ editLabel, deleteLabel, onEdit, onDelete }: { editLabel: string; deleteLabel: string; onEdit: () => void; onDelete?: () => void }) {
+function ActionButtons({
+  viewLabel,
+  editLabel,
+  deleteLabel,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  viewLabel: string;
+  editLabel: string;
+  deleteLabel: string;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete?: () => void;
+}) {
   return (
     <div className="flex justify-end gap-1">
-      <button onClick={onEdit} className="icon-button hover:text-teal-600" aria-label={editLabel}><Pencil size={17} /></button>
-      {onDelete && <button onClick={onDelete} className="icon-button hover:bg-rose-50 hover:text-rose-600" aria-label={deleteLabel}><Trash2 size={17} /></button>}
+      <button
+        onClick={onView}
+        className="icon-button rounded-lg border border-slate-200 hover:text-teal-700"
+        aria-label={viewLabel}
+      >
+        <Eye size={15} />
+      </button>
+      <button
+        onClick={onEdit}
+        className="icon-button rounded-lg border border-slate-200 hover:text-teal-700"
+        aria-label={editLabel}
+      >
+        <Pencil size={15} />
+      </button>
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          className="icon-button rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600"
+          aria-label={deleteLabel}
+        >
+          <Trash2 size={15} />
+        </button>
+      )}
     </div>
   );
 }
@@ -577,11 +1055,7 @@ function FormActions({ busy, submitLabel, onCancel }: { busy: boolean; submitLab
 
 function Stat({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: "cyan" | "emerald" | "violet" }) {
   const colors = { cyan: "bg-cyan-100 text-cyan-700", emerald: "bg-emerald-100 text-emerald-700", violet: "bg-violet-100 text-violet-700" };
-  return <article className="glass-panel flex items-center gap-4 p-5"><span className={`grid size-12 place-items-center rounded-2xl ${colors[color]}`}>{icon}</span><div><p className="text-2xl font-bold">{value}</p><p className="text-sm text-slate-500">{label}</p></div></article>;
-}
-
-function ErrorBanner({ message }: { message: string }) {
-  return <p className="mx-4 mb-4 rounded-xl border border-rose-100 bg-rose-50/80 p-3 text-sm text-rose-700 sm:mx-6">{message}</p>;
+  return <article className="table-card flex items-center gap-4 p-5"><span className={`grid size-12 place-items-center rounded-2xl ${colors[color]}`}>{icon}</span><div><p className="text-2xl font-bold">{value}</p><p className="text-sm text-slate-500">{label}</p></div></article>;
 }
 
 function EmptyState({ message }: { message: string }) {

@@ -27,3 +27,29 @@ export type CreateUserInput = {
   password: string;
   role_ids: number[];
 };
+
+export type Category = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  image_url: string | null;
+  parent_id: number | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CategoryTreeNode = Category & {
+  children: CategoryTreeNode[];
+};
+
+export type CategoryInput = {
+  name: string;
+  slug?: string;
+  description?: string;
+  parent_id?: number | null;
+  is_active?: boolean;
+  sort_order?: number;
+};

@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { LockKeyhole, Store } from "lucide-react";
 
+import { toastError, toastSuccess } from "@/lib/toast";
 import { login } from "@/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
@@ -12,9 +13,18 @@ export function LoginForm() {
   const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("ChangeMe123!");
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    void dispatch(login({ email, password }));
+    const result = await dispatch(login({ email, password }));
+    if (login.fulfilled.match(result)) {
+      toastSuccess(dispatch, "Signed in", "Welcome back.");
+    } else {
+      toastError(
+        dispatch,
+        "Sign in failed",
+        result.error?.message ?? "Invalid email or password.",
+      );
+    }
   }
 
   return (
