@@ -5,9 +5,17 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.core.database import Base
+from app.modules.catalog.models.attribute import AttributeDefinition  # noqa: F401
 from app.modules.catalog.models.category import Category  # noqa: F401
+from app.modules.catalog.models.product import (  # noqa: F401
+    Product,
+    ProductAttribute,
+    ProductMedia,
+    ProductVariant,
+)
 from app.modules.iam.models.role import Role  # noqa: F401
 from app.modules.identity.models.user import User  # noqa: F401
+from app.modules.settings.models import Coupon, StoreSettings, TaxRule  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))

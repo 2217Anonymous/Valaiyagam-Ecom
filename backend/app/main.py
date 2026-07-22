@@ -10,16 +10,19 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.init_db import seed_database
-from app.modules.catalog.api import categories
+from app.modules.catalog.api import attributes, categories, products
 from app.modules.catalog.services.category_service import CATEGORY_UPLOAD_DIR, UPLOAD_ROOT
+from app.modules.catalog.services.product_service import PRODUCT_UPLOAD_DIR
 from app.modules.iam.api import roles
 from app.modules.identity.api import auth, users
+from app.modules.settings.api import router as settings_router
 from app.utils.exceptions import AppError
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     CATEGORY_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    PRODUCT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     with SessionLocal() as db:
         seed_database(db)
     yield
@@ -53,3 +56,6 @@ app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(users.router, prefix=settings.api_v1_prefix)
 app.include_router(roles.router, prefix=settings.api_v1_prefix)
 app.include_router(categories.router, prefix=settings.api_v1_prefix)
+app.include_router(products.router, prefix=settings.api_v1_prefix)
+app.include_router(attributes.router, prefix=settings.api_v1_prefix)
+app.include_router(settings_router, prefix=settings.api_v1_prefix)

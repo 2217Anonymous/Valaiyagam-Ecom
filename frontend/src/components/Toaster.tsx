@@ -11,8 +11,8 @@ const toneStyles: Record<
   { wrap: string; icon: string; Icon: typeof CheckCircle2 }
 > = {
   success: {
-    wrap: "border-emerald-200 bg-emerald-50 text-emerald-900",
-    icon: "text-emerald-600",
+    wrap: "border-neutral-800 bg-neutral-900 text-white",
+    icon: "text-white",
     Icon: CheckCircle2,
   },
   error: {
@@ -52,7 +52,7 @@ function ToastItem({
 
   return (
     <div
-      className={`pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl border px-4 py-3 shadow-[0_16px_40px_rgba(71,85,105,0.18)] backdrop-blur-xl ${style.wrap}`}
+      className={`pointer-events-auto flex w-full max-w-md items-start gap-3 border px-4 py-3 backdrop-blur-xl ${style.wrap}`}
       role="status"
     >
       <Icon className={`mt-0.5 size-5 shrink-0 ${style.icon}`} />
@@ -63,7 +63,7 @@ function ToastItem({
       <button
         type="button"
         onClick={() => dispatch(dismissToast(id))}
-        className="rounded-lg p-1 opacity-60 transition hover:bg-black/5 hover:opacity-100"
+        className="p-1 opacity-60 transition hover:bg-black/5 hover:opacity-100"
         aria-label="Dismiss notification"
       >
         <X size={16} />

@@ -27,4 +27,6 @@ Publishes `product.published`, `stock.low`, and `stock.changed` events.
 ## Implementation status
 
 - Categories CRUD (flat + nested via `parent_id`, `is_active`, slug, sort order): done
-- Products, variants, media, inventory: planned
+- Products + media create/edit (VL-011): done
+- Product attributes + variants with SKU/price/stock overrides (VL-012): done
+- Inventory alerts: planned

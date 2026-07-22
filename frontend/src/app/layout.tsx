@@ -9,8 +9,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Valaiyagam Commerce Admin",
-  description: "User and role administration",
+  title: "CLASSIC WAY Admin",
+  description: "CLASSIC WAY commerce administration",
 };
 
 export default function RootLayout({

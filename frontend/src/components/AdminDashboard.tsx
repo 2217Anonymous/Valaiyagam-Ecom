@@ -3,18 +3,21 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   Eye,
-  FolderTree,
-  LogOut,
   Pencil,
   Plus,
   ShieldCheck,
-  Sparkles,
-  Store,
   Trash2,
   UserRoundCheck,
   Users,
 } from "lucide-react";
 
+import {
+  AdminShell,
+  useAdminTabParam,
+} from "@/components/AdminShell";
+import { AttributesPanel } from "@/components/AttributesPanel";
+import { CategoriesPanel } from "@/components/CategoriesPanel";
+import { CouponsPanel } from "@/components/CouponsPanel";
 import {
   FilterSelect,
   SelectTd,
@@ -25,12 +28,15 @@ import {
   TablePagination,
   TableToolbar,
 } from "@/components/DataTableControls";
+import { ProductsPanel } from "@/components/ProductsPanel";
+import { ProfileSettingsPanel } from "@/components/ProfileSettingsPanel";
+import { ShopDetailsPanel } from "@/components/ShopDetailsPanel";
+import { TaxRulesPanel } from "@/components/TaxRulesPanel";
 import { useRowSelection } from "@/hooks/useRowSelection";
 import { useTableState } from "@/hooks/useTableState";
 import { toastError, toastSuccess } from "@/lib/toast";
 import type { Role, User } from "@/lib/types";
 import type { RootState } from "@/store";
-import { logout } from "@/store/authSlice";
 import {
   createRole,
   deleteRole,
@@ -45,18 +51,85 @@ import {
   updateUser,
 } from "@/store/usersSlice";
 
-import { CategoriesPanel } from "./CategoriesPanel";
 import { ConfirmDialog, Modal } from "./Modal";
 
-type Tab = "users" | "roles" | "categories";
 const protectedRoles = new Set(["admin", "manager", "viewer"]);
+
+function isProtectedRole(name: string) {
+  return protectedRoles.has(name.trim().toLowerCase());
+}
+
+const tabMeta = {
+  users: {
+    title: "Users",
+    breadcrumbs: [
+      { label: "Admin", href: "/" },
+      { label: "Users" },
+    ],
+  },
+  roles: {
+    title: "Roles",
+    breadcrumbs: [
+      { label: "Admin", href: "/" },
+      { label: "Roles" },
+    ],
+  },
+  categories: {
+    title: "Categories",
+    breadcrumbs: [
+      { label: "Ecommerce", href: "/?tab=products" },
+      { label: "Categories" },
+    ],
+  },
+  products: {
+    title: "Products",
+    breadcrumbs: [
+      { label: "Ecommerce", href: "/?tab=products" },
+      { label: "Products" },
+    ],
+  },
+  attributes: {
+    title: "Attributes",
+    breadcrumbs: [
+      { label: "Ecommerce", href: "/?tab=products" },
+      { label: "Attributes" },
+    ],
+  },
+  profile: {
+    title: "Profile settings",
+    breadcrumbs: [
+      { label: "Settings", href: "/?tab=profile" },
+      { label: "Profile" },
+    ],
+  },
+  shop: {
+    title: "Our shop details",
+    breadcrumbs: [
+      { label: "Settings", href: "/?tab=profile" },
+      { label: "Shop" },
+    ],
+  },
+  tax: {
+    title: "Tax",
+    breadcrumbs: [
+      { label: "Settings", href: "/?tab=profile" },
+      { label: "Tax" },
+    ],
+  },
+  coupons: {
+    title: "Coupons",
+    breadcrumbs: [
+      { label: "Settings", href: "/?tab=profile" },
+      { label: "Coupons" },
+    ],
+  },
+} as const;
 
 export function AdminDashboard() {
   const dispatch = useAppDispatch();
-  const currentUser = useAppSelector((state) => state.auth.user);
   const usersState = useAppSelector((state) => state.users);
   const rolesState = useAppSelector((state) => state.roles);
-  const [tab, setTab] = useState<Tab>("users");
+  const tab = useAdminTabParam("users");
 
   useEffect(() => {
     void dispatch(fetchUsers());
@@ -64,140 +137,31 @@ export function AdminDashboard() {
   }, [dispatch]);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#f5f8fc] text-slate-900">
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute -left-24 top-20 size-80 rounded-full bg-cyan-200/35 blur-3xl" />
-        <div className="absolute right-0 top-0 size-96 rounded-full bg-violet-200/30 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 size-96 rounded-full bg-emerald-200/25 blur-3xl" />
-      </div>
-
-      <aside className="fixed inset-y-5 left-5 z-30 hidden w-64 flex-col rounded-[28px] border border-white/80 bg-white/65 p-5 shadow-[0_20px_60px_rgba(71,85,105,0.12)] backdrop-blur-2xl lg:flex">
-        <Brand />
-        <nav className="mt-10 space-y-2">
-          <NavButton active={tab === "users"} onClick={() => setTab("users")}>
-            <Users size={18} /> Users
-          </NavButton>
-          <NavButton active={tab === "roles"} onClick={() => setTab("roles")}>
-            <ShieldCheck size={18} /> Roles
-          </NavButton>
-          <NavButton
-            active={tab === "categories"}
-            onClick={() => setTab("categories")}
-          >
-            <FolderTree size={18} /> Categories
-          </NavButton>
-        </nav>
-        <div className="mt-auto rounded-2xl border border-white bg-white/70 p-4 shadow-sm">
-          <p className="truncate text-sm font-semibold">{currentUser?.full_name}</p>
-          <p className="truncate text-xs text-slate-500">{currentUser?.email}</p>
-          <button
-            onClick={() => dispatch(logout())}
-            className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-rose-600"
-          >
-            <LogOut size={16} /> Sign out
-          </button>
-        </div>
-      </aside>
-
-      <div className="relative pb-24 lg:pl-[300px] lg:pb-0">
-        <header className="sticky top-0 z-20 border-b border-white/70 bg-white/55 px-5 py-5 backdrop-blur-2xl">
-          <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="lg:hidden">
-                <Brand compact />
-              </div>
-              <div className="hidden lg:block">
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-teal-600">
-                  <Sparkles size={14} /> Control center
-                </p>
-                <h1 className="mt-1 text-2xl font-bold">Administration</h1>
-              </div>
-            </div>
-            <button
-              onClick={() => dispatch(logout())}
-              className="rounded-xl border border-white bg-white/70 p-2.5 text-slate-500 shadow-sm transition hover:text-rose-600 lg:hidden"
-              aria-label="Sign out"
-            >
-              <LogOut size={19} />
-            </button>
-          </div>
-        </header>
-
-        <main className="w-full px-5 py-5">
-          <div className="mb-5 lg:hidden">
-            <p className="text-sm font-medium text-teal-600">Administration</p>
-            <h1 className="text-2xl font-bold">
-              {tab === "users"
-                ? "User management"
-                : tab === "roles"
-                  ? "Role management"
-                  : "Category management"}
-            </h1>
-          </div>
-          {tab === "users" ? (
-            <UsersPanel usersState={usersState} roles={rolesState.items} />
-          ) : tab === "roles" ? (
-            <RolesPanel />
-          ) : (
-            <CategoriesPanel />
-          )}
-        </main>
-      </div>
-
-      <nav className="fixed inset-x-4 bottom-4 z-40 grid grid-cols-3 rounded-2xl border border-white/80 bg-white/75 p-2 shadow-[0_16px_50px_rgba(71,85,105,0.2)] backdrop-blur-2xl lg:hidden">
-        <NavButton active={tab === "users"} onClick={() => setTab("users")}>
-          <Users size={18} /> Users
-        </NavButton>
-        <NavButton active={tab === "roles"} onClick={() => setTab("roles")}>
-          <ShieldCheck size={18} /> Roles
-        </NavButton>
-        <NavButton
-          active={tab === "categories"}
-          onClick={() => setTab("categories")}
-        >
-          <FolderTree size={18} /> Categories
-        </NavButton>
-      </nav>
-    </div>
-  );
-}
-
-function Brand({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/20">
-        <Store size={22} />
-      </span>
-      {!compact && (
-        <div>
-          <p className="font-bold">Valaiyagam</p>
-          <p className="text-xs text-slate-500">Commerce admin</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function NavButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition lg:justify-start ${
-        active
-          ? "bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/20"
-          : "text-slate-500 hover:bg-white/80 hover:text-slate-900"
-      }`}
+    <AdminShell
+      activeNav={tab}
+      title={tabMeta[tab].title}
+      breadcrumbs={[...tabMeta[tab].breadcrumbs]}
     >
-      {children}
-    </button>
+      {tab === "users" ? (
+        <UsersPanel usersState={usersState} roles={rolesState.items} />
+      ) : tab === "roles" ? (
+        <RolesPanel />
+      ) : tab === "categories" ? (
+        <CategoriesPanel />
+      ) : tab === "attributes" ? (
+        <AttributesPanel />
+      ) : tab === "profile" ? (
+        <ProfileSettingsPanel />
+      ) : tab === "shop" ? (
+        <ShopDetailsPanel />
+      ) : tab === "tax" ? (
+        <TaxRulesPanel />
+      ) : tab === "coupons" ? (
+        <CouponsPanel />
+      ) : (
+        <ProductsPanel />
+      )}
+    </AdminShell>
   );
 }
 
@@ -609,8 +573,8 @@ function UserFormModal({
         <Field label="Assigned roles" hint="Choose one or more roles. New users default to viewer when none is selected.">
           <div className="grid gap-2 sm:grid-cols-2">
             {roles.map((role) => (
-              <label key={role.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${form.role_ids.includes(role.id) ? "border-teal-300 bg-teal-50/80" : "border-slate-200 bg-white/60 hover:border-slate-300"}`}>
-                <input type="checkbox" className="mt-1 accent-teal-600" checked={form.role_ids.includes(role.id)} onChange={() => toggleRole(role.id)} />
+              <label key={role.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${form.role_ids.includes(role.id) ? "border-neutral-300 bg-neutral-100/80" : "border-slate-200 bg-white/60 hover:border-slate-300"}`}>
+                <input type="checkbox" className="mt-1 form-checkbox" checked={form.role_ids.includes(role.id)} onChange={() => toggleRole(role.id)} />
                 <span><span className="block text-sm font-semibold">{role.name}</span><span className="text-xs text-slate-500">{role.description || "No description"}</span></span>
               </label>
             ))}
@@ -644,14 +608,14 @@ function RolesPanel() {
       case "description":
         return role.description ?? "";
       case "type":
-        return protectedRoles.has(role.name) ? 0 : 1;
+        return isProtectedRole(role.name) ? 0 : 1;
       default:
         return role.name;
     }
   }, []);
 
   const filteredByType = rolesState.items.filter((role) => {
-    const isSystem = protectedRoles.has(role.name);
+    const isSystem = isProtectedRole(role.name);
     if (typeFilter === "system") return isSystem;
     if (typeFilter === "custom") return !isSystem;
     return true;
@@ -667,6 +631,10 @@ function RolesPanel() {
 
   const getRoleId = useCallback((role: Role) => role.id, []);
   const selection = useRowSelection(table.pageRows, getRoleId);
+
+  useEffect(() => {
+    void dispatch(fetchRoles());
+  }, [dispatch]);
 
   useEffect(() => {
     if (rolesState.error) {
@@ -695,7 +663,7 @@ function RolesPanel() {
   async function confirmBulkDelete() {
     const ids = selection.selectedIds.filter((id) => {
       const role = rolesState.items.find((item) => item.id === id);
-      return role && !protectedRoles.has(role.name);
+      return role && !isProtectedRole(role.name);
     });
     if (ids.length === 0) {
       toastError(dispatch, "Nothing to delete", "System roles cannot be deleted.");
@@ -817,7 +785,7 @@ function RolesPanel() {
                   <td className="px-4 py-3.5 text-slate-500">#{role.id}</td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-3">
-                      <span className="grid size-9 place-items-center rounded-xl bg-violet-100 text-violet-600">
+                      <span className="avatar-circle grid size-9 place-items-center bg-[var(--theme-green-soft)] text-[var(--theme-green)]">
                         <ShieldCheck size={16} />
                       </span>
                       <p className="font-semibold capitalize">
@@ -829,12 +797,12 @@ function RolesPanel() {
                     {role.description || "No description provided."}
                   </td>
                   <td className="px-4 py-3.5">
-                    {protectedRoles.has(role.name) ? (
+                    {isProtectedRole(role.name) ? (
                       <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
                         System
                       </span>
                     ) : (
-                      <span className="inline-flex rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700">
+                      <span className="inline-flex rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-900">
                         Custom
                       </span>
                     )}
@@ -847,7 +815,7 @@ function RolesPanel() {
                       onView={() => setFormRole(role)}
                       onEdit={() => setFormRole(role)}
                       onDelete={
-                        protectedRoles.has(role.name)
+                        isProtectedRole(role.name)
                           ? undefined
                           : () => setDeleteTarget(role)
                       }
@@ -901,7 +869,7 @@ function RolesPanel() {
 function RoleFormModal({ role, onClose }: { role: Role | "new" | null; onClose: () => void }) {
   const dispatch = useAppDispatch();
   const editing = role !== null && role !== "new";
-  const protectedRole = editing && protectedRoles.has(role.name);
+  const protectedRole = editing && isProtectedRole(role.name);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -968,7 +936,7 @@ function PanelHeader({ title, action }: { title: string; description?: string; a
 function UserIdentity({ user }: { user: User }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan-100 to-teal-100 font-bold text-teal-700">{user.full_name.slice(0, 1).toUpperCase()}</span>
+      <span className="avatar-circle grid size-10 shrink-0 place-items-center bg-[var(--theme-green-soft)] font-bold text-[var(--theme-green)]">{user.full_name.slice(0, 1).toUpperCase()}</span>
       <div className="min-w-0"><p className="truncate font-semibold">{user.full_name}</p><p className="truncate text-xs text-slate-500 sm:text-sm">{user.email}</p></div>
     </div>
   );
@@ -977,7 +945,7 @@ function UserIdentity({ user }: { user: User }) {
 function RoleBadges({ roles }: { roles: Role[] }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {roles.length ? roles.map((role) => <span key={role.id} className="rounded-full border border-teal-100 bg-teal-50/80 px-2.5 py-1 text-xs font-semibold text-teal-700">{role.name}</span>) : <span className="text-xs text-slate-400">No roles</span>}
+      {roles.length ? roles.map((role) => <span key={role.id} className="rounded-full border border-neutral-100 bg-neutral-100/80 px-2.5 py-1 text-xs font-semibold text-neutral-900">{role.name}</span>) : <span className="text-xs text-slate-400">No roles</span>}
     </div>
   );
 }
@@ -987,7 +955,7 @@ function StatusBadge({ active }: { active: boolean }) {
     <span
       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
         active
-          ? "bg-teal-50 text-teal-700"
+          ? "bg-neutral-100 text-neutral-900"
           : "bg-amber-50 text-amber-700"
       }`}
     >
@@ -1015,14 +983,14 @@ function ActionButtons({
     <div className="flex justify-end gap-1">
       <button
         onClick={onView}
-        className="icon-button rounded-lg border border-slate-200 hover:text-teal-700"
+        className="icon-button rounded-lg border border-slate-200 hover:text-neutral-900"
         aria-label={viewLabel}
       >
         <Eye size={15} />
       </button>
       <button
         onClick={onEdit}
-        className="icon-button rounded-lg border border-slate-200 hover:text-teal-700"
+        className="icon-button rounded-lg border border-slate-200 hover:text-neutral-900"
         aria-label={editLabel}
       >
         <Pencil size={15} />

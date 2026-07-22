@@ -14,4 +14,4 @@ COPY alembic ./alembic
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "mkdir -p /app/uploads/categories && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "mkdir -p /app/uploads/categories /app/uploads/products && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

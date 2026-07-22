@@ -6,7 +6,6 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Search,
   Trash2,
 } from "lucide-react";
 
@@ -25,16 +24,13 @@ export function TableToolbar({
 }) {
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="relative w-full sm:max-w-xs">
-        <Search
-          size={16}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-        />
+      <div className="w-full sm:max-w-xs">
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={searchPlaceholder}
           className="table-search"
+          aria-label={searchPlaceholder}
         />
       </div>
       <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -187,7 +183,7 @@ export function SelectionBar({
 }) {
   if (count === 0) return null;
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-teal-50/70 px-5 py-2.5">
+    <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-neutral-100/70 px-5 py-2.5">
       <p className="text-sm font-medium text-teal-800">
         {count} selected
       </p>

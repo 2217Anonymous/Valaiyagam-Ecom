@@ -2,6 +2,11 @@ import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
 
 import { apiRequest } from "@/lib/api";
 import type { Category, CategoryInput, CategoryTreeNode } from "@/lib/types";
+import {
+  mockCategories,
+  mockCategoryTree,
+  resolveDemoData,
+} from "@/mock";
 
 type StateWithAuth = { auth: { token: string | null } };
 
@@ -35,17 +40,35 @@ export const fetchCategories = createAsyncThunk<
   Category[],
   void,
   { state: StateWithAuth }
->("categories/fetch", (_, { getState }) =>
-  apiRequest<Category[]>("/categories", {}, getState().auth.token),
-);
+>("categories/fetch", async (_, { getState }) => {
+  try {
+    const data = await apiRequest<Category[]>(
+      "/categories",
+      {},
+      getState().auth.token,
+    );
+    return resolveDemoData(data, mockCategories);
+  } catch {
+    return resolveDemoData([], mockCategories);
+  }
+});
 
 export const fetchCategoryTree = createAsyncThunk<
   CategoryTreeNode[],
   void,
   { state: StateWithAuth }
->("categories/fetchTree", (_, { getState }) =>
-  apiRequest<CategoryTreeNode[]>("/categories/tree", {}, getState().auth.token),
-);
+>("categories/fetchTree", async (_, { getState }) => {
+  try {
+    const data = await apiRequest<CategoryTreeNode[]>(
+      "/categories/tree",
+      {},
+      getState().auth.token,
+    );
+    return resolveDemoData(data, mockCategoryTree);
+  } catch {
+    return resolveDemoData([], mockCategoryTree);
+  }
+});
 
 export const createCategory = createAsyncThunk<
   Category,

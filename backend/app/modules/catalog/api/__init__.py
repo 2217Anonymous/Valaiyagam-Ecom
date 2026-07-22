@@ -1,3 +1,3 @@
-from app.modules.catalog.api import categories
+from app.modules.catalog.api import attributes, categories, products
 
-__all__ = ["categories"]
+__all__ = ["attributes", "categories", "products"]
