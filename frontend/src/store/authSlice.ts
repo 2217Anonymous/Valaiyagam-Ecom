@@ -52,6 +52,10 @@ const authSlice = createSlice({
       localStorage.removeItem("admin_token");
       localStorage.removeItem("admin_user");
     },
+    setCurrentUser(state, action: PayloadAction<User>) {
+      state.user = action.payload;
+      localStorage.setItem("admin_user", JSON.stringify(action.payload));
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -71,5 +75,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { hydrateAuth, logout } = authSlice.actions;
+export const { hydrateAuth, logout, setCurrentUser } = authSlice.actions;
 export default authSlice.reducer;

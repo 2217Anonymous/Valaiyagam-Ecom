@@ -40,6 +40,8 @@ services:
       INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-System Admin}
     ports:
       - "8000:8000"
+    volumes:
+      - backend_uploads:/app/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -51,6 +53,8 @@ services:
       context: ./frontend
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+        NEXT_PUBLIC_API_ORIGIN: ${NEXT_PUBLIC_API_ORIGIN:-http://localhost:8000}
+        NEXT_PUBLIC_DEMO_MOCK: ${NEXT_PUBLIC_DEMO_MOCK:-force}
     container_name: valaiyagam-frontend
     restart: unless-stopped
     ports:
@@ -62,6 +66,7 @@ services:
 
 volumes:
   mysql_data:
+  backend_uploads:
 
 networks:
   valaiyagam-network:

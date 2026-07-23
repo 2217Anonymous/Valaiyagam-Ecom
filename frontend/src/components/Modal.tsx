@@ -45,7 +45,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className={`max-h-[92vh] w-full overflow-y-auto rounded-t-3xl border border-white/80 bg-white/90 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-2xl sm:rounded-3xl sm:p-7 ${widths[size]}`}
+        className={`max-h-[92vh] w-full overflow-y-auto border border-[var(--card-border)] bg-white p-5 sm:p-7 ${widths[size]}`}
       >
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
@@ -57,7 +57,7 @@ export function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white/80 p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            className="border border-[var(--card-border)] bg-white p-2 text-slate-500 transition hover:bg-[#f3f6f9] hover:text-slate-900"
             aria-label="Close dialog"
           >
             <X size={18} />
@@ -88,8 +88,8 @@ export function ConfirmDialog({
 }) {
   return (
     <Modal open={open} title={title} onClose={onCancel} size="sm">
-      <div className="flex gap-4 rounded-2xl border border-rose-100 bg-rose-50/80 p-4">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-600">
+      <div className="flex gap-4 border border-[#f06548]/25 bg-[#fef4f2] p-4">
+        <span className="grid size-10 shrink-0 place-items-center bg-[#fde8e4] text-[#f06548]">
           <AlertTriangle size={20} />
         </span>
         <p className="text-sm leading-6 text-slate-600">{message}</p>
@@ -102,7 +102,7 @@ export function ConfirmDialog({
           type="button"
           onClick={onConfirm}
           disabled={busy}
-          className="rounded-xl bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-60"
+          className="bg-[#f06548] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#e2553d] disabled:opacity-60"
         >
           {busy ? "Please wait..." : confirmLabel}
         </button>

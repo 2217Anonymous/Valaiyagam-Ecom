@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
 
 import { apiRequest } from "@/lib/api";
 import type { CreateUserInput, User } from "@/lib/types";
+import { mockUsers, resolveDemoData } from "@/mock";
 
 type StateWithAuth = { auth: { token: string | null } };
 
@@ -15,7 +16,14 @@ const initialState: UsersState = { items: [], loading: false, error: null };
 
 export const fetchUsers = createAsyncThunk<User[], void, { state: StateWithAuth }>(
   "users/fetch",
-  (_, { getState }) => apiRequest<User[]>("/users", {}, getState().auth.token),
+  async (_, { getState }) => {
+    try {
+      const data = await apiRequest<User[]>("/users", {}, getState().auth.token);
+      return resolveDemoData(data, mockUsers);
+    } catch {
+      return resolveDemoData([], mockUsers);
+    }
+  },
 );
 
 export const createUser = createAsyncThunk<

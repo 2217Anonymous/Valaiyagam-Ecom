@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Provider } from "react-redux";
 
+import { Toaster } from "@/components/Toaster";
 import type { User } from "@/lib/types";
 import { hydrateAuth } from "@/store/authSlice";
 import { store } from "@/store";
@@ -20,5 +21,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     store.dispatch(hydrateAuth({ token, user }));
   }, []);
 
-  return <Provider store={store}>{children}</Provider>;
+  return (
+    <Provider store={store}>
+      {children}
+      <Toaster />
+    </Provider>
+  );
 }
