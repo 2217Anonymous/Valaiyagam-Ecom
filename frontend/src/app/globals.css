@@ -336,9 +336,14 @@ body {
 }
 
 .table-head {
-  background: #fff;
+  background: #f3f6f9;
   border-bottom: 1px solid var(--card-border);
   color: var(--foreground);
+}
+
+.table-head th,
+table thead th {
+  background: #f3f6f9;
 }
 
 .table-th {
@@ -1306,7 +1311,7 @@ button:disabled {
   font-weight: 600;
   color: var(--muted);
   border-bottom: 1px solid var(--card-border);
-  background: #fafbfc;
+  background: #f3f6f9;
   white-space: nowrap;
 }
 
@@ -1318,7 +1323,7 @@ button:disabled {
 }
 
 .dash-table tbody tr:hover {
-  background: #fafbfc;
+  background: #f3f6f9;
 }
 
 .dash-invite {
@@ -1445,7 +1450,7 @@ button:disabled {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--muted);
-  background: #fafbfc;
+  background: #f3f6f9;
   border-bottom: 1px solid var(--card-border);
   white-space: nowrap;
 }
@@ -1457,18 +1462,5 @@ button:disabled {
 }
 
 .product-list-table tbody tr:hover {
-  background: #fafbfc;
-}
-
-.product-action-menu {
-  position: absolute;
-  right: 0.75rem;
-  top: 2.4rem;
-  z-index: 20;
-  display: flex;
-  gap: 0.25rem;
-  border: 1px solid var(--card-border);
-  background: #fff;
-  padding: 0.4rem;
-  box-shadow: 0 8px 20px rgb(15 23 42 / 0.08);
+  background: #f3f6f9;
 }

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
-  MoreHorizontal,
   Package,
   Plus,
   Search,
@@ -139,7 +138,6 @@ export function ProductsPanel() {
   const [brandsOpen, setBrandsOpen] = useState(true);
   const [discountOpen, setDiscountOpen] = useState(false);
   const [ratingOpen, setRatingOpen] = useState(false);
-  const [actionMenuId, setActionMenuId] = useState<number | null>(null);
 
   useEffect(() => {
     void dispatch(fetchProducts());
@@ -663,40 +661,17 @@ export function ProductsPanel() {
                       <td className="whitespace-nowrap text-[var(--muted)]">
                         {formatPublished(product)}
                       </td>
-                      <td className="relative text-right">
-                        <button
-                          type="button"
-                          className="inline-flex p-1.5 text-[var(--muted)] hover:bg-[#f3f6f9] hover:text-[var(--foreground)]"
-                          aria-label={`Actions for ${product.name}`}
-                          onClick={() =>
-                            setActionMenuId((id) =>
-                              id === product.id ? null : product.id,
-                            )
+                      <td>
+                        <ActionIconButtons
+                          viewLabel={`View ${product.name}`}
+                          editLabel={`Edit ${product.name}`}
+                          deleteLabel={`Delete ${product.name}`}
+                          onView={() => router.push(`/products/${product.id}`)}
+                          onEdit={() =>
+                            router.push(`/products/${product.id}/edit`)
                           }
-                        >
-                          <MoreHorizontal size={16} />
-                        </button>
-                        {actionMenuId === product.id ? (
-                          <div className="product-action-menu">
-                            <ActionIconButtons
-                              viewLabel={`View ${product.name}`}
-                              editLabel={`Edit ${product.name}`}
-                              deleteLabel={`Delete ${product.name}`}
-                              onView={() => {
-                                setActionMenuId(null);
-                                router.push(`/products/${product.id}`);
-                              }}
-                              onEdit={() => {
-                                setActionMenuId(null);
-                                router.push(`/products/${product.id}/edit`);
-                              }}
-                              onDelete={() => {
-                                setActionMenuId(null);
-                                setDeleteTarget(product);
-                              }}
-                            />
-                          </div>
-                        ) : null}
+                          onDelete={() => setDeleteTarget(product)}
+                        />
                       </td>
                     </tr>
                   );
