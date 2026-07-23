@@ -2,16 +2,20 @@ import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
 
 import { apiRequest } from "@/lib/api";
 import type { Role } from "@/lib/types";
-import { mockRoles, resolveDemoData } from "@/mock";
+import { isDemoMockForced, mockRoles, resolveDemoData } from "@/mock";
 
 type StateWithAuth = { auth: { token: string | null } };
 type RolesState = { items: Role[]; loading: boolean; error: string | null };
 
 const initialState: RolesState = { items: [], loading: false, error: null };
 
+let mockItems: Role[] = mockRoles.map((role) => ({ ...role }));
+let nextMockId = Math.max(0, ...mockItems.map((item) => item.id)) + 1;
+
 export const fetchRoles = createAsyncThunk<Role[], void, { state: StateWithAuth }>(
   "roles/fetch",
   async (_, { getState }) => {
+    if (isDemoMockForced()) return mockItems.map((role) => ({ ...role }));
     try {
       const data = await apiRequest<Role[]>("/roles", {}, getState().auth.token);
       return resolveDemoData(data, mockRoles);
@@ -25,17 +29,33 @@ export const createRole = createAsyncThunk<
   Role,
   { name: string; description: string },
   { state: StateWithAuth }
->("roles/create", (payload, { getState }) =>
-  apiRequest<Role>(
+>("roles/create", async (payload, { getState }) => {
+  if (isDemoMockForced()) {
+    const created: Role = {
+      id: nextMockId++,
+      name: payload.name.trim(),
+      description: payload.description.trim() || null,
+      created_at: new Date().toISOString(),
+    };
+    mockItems = [...mockItems, created].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    return { ...created };
+  }
+  return apiRequest<Role>(
     "/roles",
     { method: "POST", body: JSON.stringify(payload) },
     getState().auth.token,
-  ),
-);
+  );
+});
 
 export const deleteRole = createAsyncThunk<number, number, { state: StateWithAuth }>(
   "roles/delete",
   async (id, { getState }) => {
+    if (isDemoMockForced()) {
+      mockItems = mockItems.filter((role) => role.id !== id);
+      return id;
+    }
     await apiRequest<void>(
       `/roles/${id}`,
       { method: "DELETE" },
@@ -49,13 +69,29 @@ export const updateRole = createAsyncThunk<
   Role,
   { id: number; changes: { name?: string; description?: string } },
   { state: StateWithAuth }
->("roles/update", ({ id, changes }, { getState }) =>
-  apiRequest<Role>(
+>("roles/update", async ({ id, changes }, { getState }) => {
+  if (isDemoMockForced()) {
+    const index = mockItems.findIndex((role) => role.id === id);
+    if (index < 0) throw new Error("Role not found");
+    const updated: Role = {
+      ...mockItems[index],
+      name: changes.name?.trim() ?? mockItems[index].name,
+      description:
+        changes.description !== undefined
+          ? changes.description.trim() || null
+          : mockItems[index].description,
+    };
+    mockItems = mockItems
+      .map((role) => (role.id === id ? updated : role))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { ...updated };
+  }
+  return apiRequest<Role>(
     `/roles/${id}`,
     { method: "PATCH", body: JSON.stringify(changes) },
     getState().auth.token,
-  ),
-);
+  );
+});
 
 const rolesSlice = createSlice({
   name: "roles",

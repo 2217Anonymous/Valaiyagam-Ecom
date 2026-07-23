@@ -1,5 +1,15 @@
 export { mockReviews, reviewsForProduct, mockRatingSummary } from "./reviews";
-export { resolveDemoData, resolveDemoItem, isDemoMockForced, getDemoMockMode } from "./config";
+export {
+  resolveDemoData,
+  resolveDemoItem,
+  isDemoMockForced,
+  getDemoMockMode,
+  getDataSource,
+  setDataSource,
+  getEnvDataSourceDefault,
+  DATA_SOURCE_STORAGE_KEY,
+  type DataSourceMode,
+} from "./config";
 export { mockRoles } from "./roles";
 export { mockUsers } from "./users";
 export { mockAttributes } from "./attributes";

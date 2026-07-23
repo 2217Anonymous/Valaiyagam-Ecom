@@ -1,25 +1,73 @@
 /**
- * Demo mock data for Classic Way admin modules.
- * Mode via NEXT_PUBLIC_DEMO_MOCK:
- * - "force" (default): always use mock
- * - "fallback": API when non-empty, else mock
- * - "0" | "false": never use mock
+ * Demo mock vs SQL data source for Classic Way.
+ *
+ * Preference order:
+ * 1. Runtime override (set by the header Mock/SQL switch)
+ * 2. localStorage (`valaiyagam_data_source`)
+ * 3. NEXT_PUBLIC_DEMO_MOCK env default (force → mock; off → sql)
  */
+
+export type DataSourceMode = "mock" | "sql";
+
+export const DATA_SOURCE_STORAGE_KEY = "valaiyagam_data_source";
+
+let runtimeOverride: DataSourceMode | null = null;
+
+function normalizeEnvMode(raw: string | undefined): DataSourceMode {
+  const mode = (raw ?? "force").toLowerCase();
+  if (mode === "0" || mode === "false" || mode === "off") return "sql";
+  return "mock";
+}
+
+export function getEnvDataSourceDefault(): DataSourceMode {
+  return normalizeEnvMode(process.env.NEXT_PUBLIC_DEMO_MOCK);
+}
 
 export function getDemoMockMode() {
   return (process.env.NEXT_PUBLIC_DEMO_MOCK ?? "force").toLowerCase();
 }
 
+export function readStoredDataSource(): DataSourceMode | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem(DATA_SOURCE_STORAGE_KEY);
+    if (saved === "mock" || saved === "sql") return saved;
+  } catch {
+    // ignore storage errors
+  }
+  return null;
+}
+
+/** Effective data source used by slices / mock helpers. */
+export function getDataSource(): DataSourceMode {
+  if (runtimeOverride) return runtimeOverride;
+  const stored = readStoredDataSource();
+  if (stored) {
+    runtimeOverride = stored;
+    return stored;
+  }
+  return getEnvDataSourceDefault();
+}
+
+export function setDataSource(mode: DataSourceMode) {
+  runtimeOverride = mode;
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(DATA_SOURCE_STORAGE_KEY, mode);
+    } catch {
+      // ignore storage errors
+    }
+  }
+}
+
+/** True when lists/mutations should use in-memory mock data. */
 export function isDemoMockForced() {
-  const mode = getDemoMockMode();
-  return mode === "1" || mode === "force" || mode === "true" || mode === "on";
+  return getDataSource() === "mock";
 }
 
 export function resolveDemoData<T>(apiItems: T[], mockItems: T[]): T[] {
-  const mode = getDemoMockMode();
-  if (mode === "0" || mode === "false" || mode === "off") return apiItems;
   if (isDemoMockForced()) return mockItems;
-  return apiItems.length > 0 ? apiItems : mockItems;
+  return apiItems;
 }
 
 export function resolveDemoItem<T extends { id: number }>(
@@ -27,11 +75,9 @@ export function resolveDemoItem<T extends { id: number }>(
   mockItems: T[],
   id: number,
 ): T | null {
-  const mode = getDemoMockMode();
   if (isDemoMockForced()) {
     return mockItems.find((item) => item.id === id) ?? apiItem ?? null;
   }
   if (apiItem) return apiItem;
-  if (mode === "0" || mode === "false" || mode === "off") return null;
-  return mockItems.find((item) => item.id === id) ?? null;
+  return null;
 }

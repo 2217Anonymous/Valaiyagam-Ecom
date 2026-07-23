@@ -10,12 +10,14 @@ import {
 
 import { ActionIconButtons } from "@/components/ActionIconButtons";
 import {
+  AdminNavProvider,
   AdminShell,
-  useAdminTabParam,
+  useAdminTabState,
 } from "@/components/AdminShell";
 import { AttributesPanel } from "@/components/AttributesPanel";
 import { CategoriesPanel } from "@/components/CategoriesPanel";
 import { CouponsPanel } from "@/components/CouponsPanel";
+import { DashboardPanel } from "@/components/DashboardPanel";
 import {
   FilterSelect,
   SelectTd,
@@ -66,17 +68,24 @@ function isProtectedRole(name: string) {
 }
 
 const tabMeta = {
+  dashboard: {
+    title: "Dashboard",
+    breadcrumbs: [
+      { label: "Admin", href: "/?tab=dashboard" },
+      { label: "Dashboard" },
+    ],
+  },
   users: {
     title: "Users",
     breadcrumbs: [
-      { label: "Admin", href: "/" },
+      { label: "Admin", href: "/?tab=dashboard" },
       { label: "Users" },
     ],
   },
   roles: {
     title: "Roles",
     breadcrumbs: [
-      { label: "Admin", href: "/" },
+      { label: "Admin", href: "/?tab=dashboard" },
       { label: "Roles" },
     ],
   },
@@ -184,53 +193,59 @@ export function AdminDashboard() {
   const dispatch = useAppDispatch();
   const usersState = useAppSelector((state) => state.users);
   const rolesState = useAppSelector((state) => state.roles);
-  const tab = useAdminTabParam("users");
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const dataRevision = useAppSelector((state) => state.dataSource.revision);
+  const { tab, setTab } = useAdminTabState("dashboard");
 
   useEffect(() => {
     void dispatch(fetchUsers());
     void dispatch(fetchRoles());
-  }, [dispatch]);
+  }, [dispatch, dataRevision]);
 
   return (
-    <AdminShell
-      activeNav={tab}
-      title={tabMeta[tab].title}
-      breadcrumbs={[...tabMeta[tab].breadcrumbs]}
-    >
-      {tab === "users" ? (
-        <UsersPanel usersState={usersState} roles={rolesState.items} />
-      ) : tab === "roles" ? (
-        <RolesPanel />
-      ) : tab === "categories" ? (
-        <CategoriesPanel />
-      ) : tab === "attributes" ? (
-        <AttributesPanel />
-      ) : tab === "profile" ? (
-        <ProfileSettingsPanel />
-      ) : tab === "shop" ? (
-        <ShopDetailsPanel />
-      ) : tab === "tax" ? (
-        <TaxRulesPanel />
-      ) : tab === "invoice" ? (
-        <InvoiceSettingsPanel />
-      ) : tab === "coupons" ? (
-        <CouponsPanel />
-      ) : tab === "inventory" ? (
-        <InventoryPanel />
-      ) : tab === "orders" ? (
-        <OrdersPanel />
-      ) : tab === "shipments" ? (
-        <ShipmentsPanel />
-      ) : tab === "exceptions" ? (
-        <ExceptionsPanel />
-      ) : tab === "notifications" ? (
-        <NotificationsPanel />
-      ) : tab === "reports" ? (
-        <ReportsPanel />
-      ) : (
-        <ProductsPanel />
-      )}
-    </AdminShell>
+    <AdminNavProvider onTabChange={setTab}>
+      <AdminShell
+        activeNav={tab}
+        title={tabMeta[tab].title}
+        breadcrumbs={[...tabMeta[tab].breadcrumbs]}
+      >
+        {tab === "dashboard" ? (
+          <DashboardPanel userName={currentUser?.full_name} />
+        ) : tab === "users" ? (
+          <UsersPanel usersState={usersState} roles={rolesState.items} />
+        ) : tab === "roles" ? (
+          <RolesPanel />
+        ) : tab === "categories" ? (
+          <CategoriesPanel />
+        ) : tab === "attributes" ? (
+          <AttributesPanel />
+        ) : tab === "profile" ? (
+          <ProfileSettingsPanel />
+        ) : tab === "shop" ? (
+          <ShopDetailsPanel />
+        ) : tab === "tax" ? (
+          <TaxRulesPanel />
+        ) : tab === "invoice" ? (
+          <InvoiceSettingsPanel />
+        ) : tab === "coupons" ? (
+          <CouponsPanel />
+        ) : tab === "inventory" ? (
+          <InventoryPanel />
+        ) : tab === "orders" ? (
+          <OrdersPanel />
+        ) : tab === "shipments" ? (
+          <ShipmentsPanel />
+        ) : tab === "exceptions" ? (
+          <ExceptionsPanel />
+        ) : tab === "notifications" ? (
+          <NotificationsPanel />
+        ) : tab === "reports" ? (
+          <ReportsPanel />
+        ) : (
+          <ProductsPanel />
+        )}
+      </AdminShell>
+    </AdminNavProvider>
   );
 }
 

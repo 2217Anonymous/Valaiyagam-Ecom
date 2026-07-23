@@ -6,6 +6,7 @@ import { Provider } from "react-redux";
 import { Toaster } from "@/components/Toaster";
 import type { User } from "@/lib/types";
 import { hydrateAuth } from "@/store/authSlice";
+import { hydrateDataSource } from "@/store/dataSourceSlice";
 import { store } from "@/store";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("admin_user");
     }
     store.dispatch(hydrateAuth({ token, user }));
+    store.dispatch(hydrateDataSource());
   }, []);
 
   return (

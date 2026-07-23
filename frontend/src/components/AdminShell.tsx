@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   BarChart3,
@@ -30,12 +37,17 @@ import {
   UserRound,
   Users,
   Wrench,
+  LayoutDashboard,
 } from "lucide-react";
 
+import { toastSuccess } from "@/lib/toast";
+import type { DataSourceMode } from "@/mock";
 import { logout } from "@/store/authSlice";
+import { setDataSourceMode } from "@/store/dataSourceSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export type AdminNavKey =
+  | "dashboard"
   | "users"
   | "roles"
   | "categories"
@@ -82,6 +94,47 @@ function navHref(key: AdminNavKey) {
   return `/?tab=${key}`;
 }
 
+type AdminNavContextValue = {
+  goToTab: (key: AdminNavKey) => void;
+};
+
+const AdminNavContext = createContext<AdminNavContextValue | null>(null);
+
+export function AdminNavProvider({
+  children,
+  onTabChange,
+}: {
+  children: React.ReactNode;
+  activeTab?: AdminNavKey;
+  onTabChange: (key: AdminNavKey) => void;
+}) {
+  const router = useRouter();
+  const value = useMemo<AdminNavContextValue>(
+    () => ({
+      goToTab: (key) => {
+        onTabChange(key);
+        router.push(navHref(key), { scroll: false });
+      },
+    }),
+    [onTabChange, router],
+  );
+
+  return (
+    <AdminNavContext.Provider value={value}>{children}</AdminNavContext.Provider>
+  );
+}
+
+export function useAdminTabState(defaultTab: AdminNavKey = "dashboard") {
+  const urlTab = useAdminTabParam(defaultTab);
+  const [tab, setTab] = useState<AdminNavKey>(urlTab);
+
+  useEffect(() => {
+    setTab(urlTab);
+  }, [urlTab]);
+
+  return { tab, setTab };
+}
+
 function initials(name?: string | null) {
   if (!name) return "A";
   const parts = name.trim().split(/\s+/).slice(0, 2);
@@ -101,6 +154,8 @@ export function AdminShell({
 }) {
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.auth.user);
+  const dataSource = useAppSelector((state) => state.dataSource.mode);
+  const dataRevision = useAppSelector((state) => state.dataSource.revision);
   const pathname = usePathname();
   const [pinned, setPinned] = useState(true);
   const [hovered, setHovered] = useState(false);
@@ -178,6 +233,18 @@ export function AdminShell({
     }
   }
 
+  function switchDataSource(mode: DataSourceMode) {
+    if (mode === dataSource) return;
+    dispatch(setDataSourceMode(mode));
+    toastSuccess(
+      dispatch,
+      mode === "mock" ? "Mock data mode" : "SQL data mode",
+      mode === "mock"
+        ? "Admin lists and edits now use demo mock data."
+        : "Admin lists and edits now use the live API / database.",
+    );
+  }
+
   const crumbs = useMemo(
     () =>
       breadcrumbs ?? [
@@ -208,7 +275,7 @@ export function AdminShell({
           }`}
         >
           <Link
-            href="/"
+            href="/?tab=dashboard"
             className={`flex min-w-0 items-center ${
               expanded ? "gap-2.5" : "justify-center"
             }`}
@@ -240,6 +307,13 @@ export function AdminShell({
         <nav className="flex-1 overflow-x-hidden overflow-y-auto py-3">
           {expanded && <p className="nav-group-label">Administration</p>}
 
+          <NavButton
+            active={activeNav === "dashboard"}
+            collapsed={!expanded}
+            href={tabHref("dashboard")}
+            icon={<LayoutDashboard size={16} />}
+            label="Dashboard"
+          />
           <NavButton
             active={activeNav === "users"}
             collapsed={!expanded}
@@ -577,6 +651,34 @@ export function AdminShell({
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
+            <div
+              className="data-source-switch"
+              role="group"
+              aria-label="Data source"
+              title="Switch between mock demo data and live SQL API"
+            >
+              <button
+                type="button"
+                className={`data-source-option ${
+                  dataSource === "mock" ? "data-source-option-active" : ""
+                }`}
+                aria-pressed={dataSource === "mock"}
+                onClick={() => switchDataSource("mock")}
+              >
+                Mock
+              </button>
+              <button
+                type="button"
+                className={`data-source-option ${
+                  dataSource === "sql" ? "data-source-option-active" : ""
+                }`}
+                aria-pressed={dataSource === "sql"}
+                onClick={() => switchDataSource("sql")}
+              >
+                SQL
+              </button>
+            </div>
+
             <HeaderIconButton label="Layout">
               <LayoutGrid size={17} />
             </HeaderIconButton>
@@ -649,31 +751,39 @@ export function AdminShell({
           </div>
         </header>
 
-        <div className="vz-page-title-box sticky top-[70px] z-10">
-          <h1 className="vz-page-title">{title}</h1>
-          <ol className="vz-breadcrumb">
-            {crumbs.map((crumb, index) => (
-              <li
-                key={`${crumb.label}-${index}`}
-                className="flex items-center gap-2"
-              >
-                {index > 0 && <span className="vz-breadcrumb-sep">›</span>}
-                {crumb.href ? (
-                  <Link href={crumb.href}>{crumb.label}</Link>
-                ) : (
-                  <span className="text-[var(--foreground)]">{crumb.label}</span>
-                )}
-              </li>
-            ))}
-          </ol>
-        </div>
+        {activeNav !== "dashboard" && (
+          <div className="vz-page-title-box sticky top-[70px] z-10">
+            <h1 className="vz-page-title">{title}</h1>
+            <ol className="vz-breadcrumb">
+              {crumbs.map((crumb, index) => (
+                <li
+                  key={`${crumb.label}-${index}`}
+                  className="flex items-center gap-2"
+                >
+                  {index > 0 && <span className="vz-breadcrumb-sep">›</span>}
+                  {crumb.href ? (
+                    <Link href={crumb.href}>{crumb.label}</Link>
+                  ) : (
+                    <span className="text-[var(--foreground)]">{crumb.label}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
 
-        <main className="px-4 py-5 pb-28 sm:px-6">{children}</main>
+        <main
+          className={`px-4 pb-28 sm:px-6 ${
+            activeNav === "dashboard" ? "py-5 pt-6" : "py-5"
+          }`}
+        >
+          <div key={`${activeNav}-${dataRevision}`}>{children}</div>
+        </main>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-[var(--card-border)] bg-white lg:hidden">
-        <MobileNav active={activeNav === "users"} href={tabHref("users")}>
-          <Users size={16} /> Users
+        <MobileNav active={activeNav === "dashboard"} href={tabHref("dashboard")}>
+          <LayoutDashboard size={16} /> Home
         </MobileNav>
         <MobileNav active={isProductsSection} href={tabHref("products")}>
           <Package size={16} /> Products
@@ -767,11 +877,37 @@ function GroupToggle({
   );
 }
 
+function tabKeyFromHref(href: string): AdminNavKey | null {
+  if (!href.startsWith("/?tab=")) return null;
+  const tab = href.slice("/?tab=".length).split("&")[0];
+  const known: AdminNavKey[] = [
+    "dashboard",
+    "users",
+    "roles",
+    "categories",
+    "products",
+    "attributes",
+    "profile",
+    "shop",
+    "tax",
+    "invoice",
+    "coupons",
+    "inventory",
+    "orders",
+    "shipments",
+    "exceptions",
+    "notifications",
+    "reports",
+  ];
+  return known.includes(tab as AdminNavKey) ? (tab as AdminNavKey) : null;
+}
+
 function NavButton({
   active,
   href,
   icon,
   label,
+  navKey,
   collapsed = false,
   nested = false,
 }: {
@@ -779,13 +915,31 @@ function NavButton({
   href: string;
   icon: React.ReactNode;
   label: string;
+  navKey?: AdminNavKey;
   collapsed?: boolean;
   nested?: boolean;
 }) {
+  const router = useRouter();
+  const nav = useContext(AdminNavContext);
+  const resolvedKey = navKey ?? tabKeyFromHref(href);
+
   return (
     <Link
       href={href}
       title={label}
+      prefetch={false}
+      scroll={false}
+      onClick={(event) => {
+        if (resolvedKey && nav) {
+          event.preventDefault();
+          nav.goToTab(resolvedKey);
+          return;
+        }
+        if (href.startsWith("/?")) {
+          event.preventDefault();
+          router.push(href, { scroll: false });
+        }
+      }}
       className={`nav-item ${nested ? "nav-item-nested" : ""} ${
         active ? "nav-item-active" : "nav-item-idle"
       } ${collapsed ? "justify-center px-0" : ""}`}
@@ -799,15 +953,33 @@ function NavButton({
 function MobileNav({
   active,
   href,
+  navKey,
   children,
 }: {
   active: boolean;
   href: string;
+  navKey?: AdminNavKey;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const nav = useContext(AdminNavContext);
+  const resolvedKey = navKey ?? tabKeyFromHref(href);
+
   return (
     <Link
       href={href}
+      scroll={false}
+      onClick={(event) => {
+        if (resolvedKey && nav) {
+          event.preventDefault();
+          nav.goToTab(resolvedKey);
+          return;
+        }
+        if (href.startsWith("/?")) {
+          event.preventDefault();
+          router.push(href, { scroll: false });
+        }
+      }}
       className={`flex flex-col items-center gap-1 px-1 py-3 text-[10px] font-semibold ${
         active
           ? "bg-[var(--theme-green)] text-white"
@@ -819,10 +991,11 @@ function MobileNav({
   );
 }
 
-export function useAdminTabParam(defaultTab: AdminNavKey = "users"): AdminNavKey {
+export function useAdminTabParam(defaultTab: AdminNavKey = "dashboard"): AdminNavKey {
   const params = useSearchParams();
   const tab = params.get("tab");
   if (
+    tab === "dashboard" ||
     tab === "roles" ||
     tab === "categories" ||
     tab === "products" ||
