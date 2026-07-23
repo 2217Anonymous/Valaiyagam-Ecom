@@ -2,15 +2,13 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
-  Eye,
-  Pencil,
   Plus,
   ShieldCheck,
-  Trash2,
   UserRoundCheck,
   Users,
 } from "lucide-react";
 
+import { ActionIconButtons } from "@/components/ActionIconButtons";
 import {
   AdminShell,
   useAdminTabParam,
@@ -28,9 +26,17 @@ import {
   TablePagination,
   TableToolbar,
 } from "@/components/DataTableControls";
+import { ExceptionsPanel } from "@/components/ExceptionsPanel";
+import { InventoryPanel } from "@/components/InventoryPanel";
+import { InvoiceSettingsPanel } from "@/components/InvoiceSettingsPanel";
+import { NotificationsPanel } from "@/components/NotificationsPanel";
+import { OrdersPanel } from "@/components/OrdersPanel";
 import { ProductsPanel } from "@/components/ProductsPanel";
 import { ProfileSettingsPanel } from "@/components/ProfileSettingsPanel";
+import { ReportsPanel } from "@/components/ReportsPanel";
+import { ShipmentsPanel } from "@/components/ShipmentsPanel";
 import { ShopDetailsPanel } from "@/components/ShopDetailsPanel";
+import { StatusPill } from "@/components/StatusPill";
 import { TaxRulesPanel } from "@/components/TaxRulesPanel";
 import { useRowSelection } from "@/hooks/useRowSelection";
 import { useTableState } from "@/hooks/useTableState";
@@ -123,6 +129,55 @@ const tabMeta = {
       { label: "Coupons" },
     ],
   },
+  invoice: {
+    title: "Invoice",
+    breadcrumbs: [
+      { label: "Settings", href: "/?tab=profile" },
+      { label: "Invoice" },
+    ],
+  },
+  inventory: {
+    title: "Inventory",
+    breadcrumbs: [
+      { label: "Operations", href: "/?tab=inventory" },
+      { label: "Inventory" },
+    ],
+  },
+  orders: {
+    title: "Orders",
+    breadcrumbs: [
+      { label: "Operations", href: "/?tab=inventory" },
+      { label: "Orders" },
+    ],
+  },
+  shipments: {
+    title: "Shipments",
+    breadcrumbs: [
+      { label: "Operations", href: "/?tab=inventory" },
+      { label: "Shipments" },
+    ],
+  },
+  exceptions: {
+    title: "Exceptions",
+    breadcrumbs: [
+      { label: "Operations", href: "/?tab=inventory" },
+      { label: "Exceptions" },
+    ],
+  },
+  notifications: {
+    title: "Notifications",
+    breadcrumbs: [
+      { label: "Operations", href: "/?tab=inventory" },
+      { label: "Notifications" },
+    ],
+  },
+  reports: {
+    title: "Reports",
+    breadcrumbs: [
+      { label: "Operations", href: "/?tab=inventory" },
+      { label: "Reports" },
+    ],
+  },
 } as const;
 
 export function AdminDashboard() {
@@ -156,8 +211,22 @@ export function AdminDashboard() {
         <ShopDetailsPanel />
       ) : tab === "tax" ? (
         <TaxRulesPanel />
+      ) : tab === "invoice" ? (
+        <InvoiceSettingsPanel />
       ) : tab === "coupons" ? (
         <CouponsPanel />
+      ) : tab === "inventory" ? (
+        <InventoryPanel />
+      ) : tab === "orders" ? (
+        <OrdersPanel />
+      ) : tab === "shipments" ? (
+        <ShipmentsPanel />
+      ) : tab === "exceptions" ? (
+        <ExceptionsPanel />
+      ) : tab === "notifications" ? (
+        <NotificationsPanel />
+      ) : tab === "reports" ? (
+        <ReportsPanel />
       ) : (
         <ProductsPanel />
       )}
@@ -383,9 +452,9 @@ function UsersPanel({
                   <td className="px-4 py-3.5"><UserIdentity user={user} /></td>
                   <td className="px-4 py-3.5 text-slate-600">{user.email}</td>
                   <td className="px-4 py-3.5"><RoleBadges roles={user.roles} /></td>
-                  <td className="px-4 py-3.5"><StatusBadge active={user.is_active} /></td>
+                  <td className="px-4 py-3.5"><StatusPill active={user.is_active} /></td>
                   <td className="px-4 py-3.5">
-                    <ActionButtons
+                    <ActionIconButtons
                       viewLabel={`View ${user.full_name}`}
                       editLabel={`Edit ${user.full_name}`}
                       deleteLabel={`Delete ${user.full_name}`}
@@ -798,17 +867,13 @@ function RolesPanel() {
                   </td>
                   <td className="px-4 py-3.5">
                     {isProtectedRole(role.name) ? (
-                      <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                        System
-                      </span>
+                      <StatusPill tone="warning" label="System" />
                     ) : (
-                      <span className="inline-flex rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-900">
-                        Custom
-                      </span>
+                      <StatusPill tone="neutral" label="Custom" />
                     )}
                   </td>
                   <td className="px-4 py-3.5">
-                    <ActionButtons
+                    <ActionIconButtons
                       viewLabel={`View ${role.name}`}
                       editLabel={`Edit ${role.name}`}
                       deleteLabel={`Delete ${role.name}`}
@@ -946,64 +1011,6 @@ function RoleBadges({ roles }: { roles: Role[] }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {roles.length ? roles.map((role) => <span key={role.id} className="rounded-full border border-neutral-100 bg-neutral-100/80 px-2.5 py-1 text-xs font-semibold text-neutral-900">{role.name}</span>) : <span className="text-xs text-slate-400">No roles</span>}
-    </div>
-  );
-}
-
-function StatusBadge({ active }: { active: boolean }) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-        active
-          ? "bg-neutral-100 text-neutral-900"
-          : "bg-amber-50 text-amber-700"
-      }`}
-    >
-      {active ? "Active" : "Inactive"}
-    </span>
-  );
-}
-
-function ActionButtons({
-  viewLabel,
-  editLabel,
-  deleteLabel,
-  onView,
-  onEdit,
-  onDelete,
-}: {
-  viewLabel: string;
-  editLabel: string;
-  deleteLabel: string;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete?: () => void;
-}) {
-  return (
-    <div className="flex justify-end gap-1">
-      <button
-        onClick={onView}
-        className="icon-button rounded-lg border border-slate-200 hover:text-neutral-900"
-        aria-label={viewLabel}
-      >
-        <Eye size={15} />
-      </button>
-      <button
-        onClick={onEdit}
-        className="icon-button rounded-lg border border-slate-200 hover:text-neutral-900"
-        aria-label={editLabel}
-      >
-        <Pencil size={15} />
-      </button>
-      {onDelete && (
-        <button
-          onClick={onDelete}
-          className="icon-button rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600"
-          aria-label={deleteLabel}
-        >
-          <Trash2 size={15} />
-        </button>
-      )}
     </div>
   );
 }

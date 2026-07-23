@@ -1,15 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ChevronDown,
-  ChevronRight,
-  Eye,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 
+import { ActionIconButtons } from "@/components/ActionIconButtons";
 import {
   FilterSelect,
   SelectTd,
@@ -21,6 +15,7 @@ import {
   TableToolbar,
 } from "@/components/DataTableControls";
 import { CategoryFormModal } from "@/components/CategoryFormModal";
+import { StatusPill } from "@/components/StatusPill";
 import { useRowSelection } from "@/hooks/useRowSelection";
 import { mediaUrl } from "@/lib/api";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
@@ -578,40 +573,17 @@ export function CategoriesPanel() {
                   </td>
                   <td className="px-4 py-3.5 text-slate-600">{row.sort_order}</td>
                   <td className="px-4 py-3.5">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        row.is_active
-                          ? "bg-neutral-100 text-neutral-900"
-                          : "bg-amber-50 text-amber-700"
-                      }`}
-                    >
-                      {row.is_active ? "Active" : "Inactive"}
-                    </span>
+                    <StatusPill active={row.is_active} />
                   </td>
                   <td className="px-4 py-3.5">
-                    <div className="flex justify-end gap-1">
-                      <button
-                        onClick={() => setFormCategory(row)}
-                        className="icon-button rounded-lg border border-slate-200 hover:text-neutral-900"
-                        aria-label={`View ${row.name}`}
-                      >
-                        <Eye size={15} />
-                      </button>
-                      <button
-                        onClick={() => setFormCategory(row)}
-                        className="icon-button rounded-lg border border-slate-200 hover:text-neutral-900"
-                        aria-label={`Edit ${row.name}`}
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(row)}
-                        className="icon-button rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600"
-                        aria-label={`Delete ${row.name}`}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                    <ActionIconButtons
+                      viewLabel={`View ${row.name}`}
+                      editLabel={`Edit ${row.name}`}
+                      deleteLabel={`Delete ${row.name}`}
+                      onView={() => setFormCategory(row)}
+                      onEdit={() => setFormCategory(row)}
+                      onDelete={() => setDeleteTarget(row)}
+                    />
                   </td>
                 </tr>
               ))}

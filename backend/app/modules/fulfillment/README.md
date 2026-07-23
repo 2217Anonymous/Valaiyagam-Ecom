@@ -1,27 +1,28 @@
 # Fulfillment Module
 
-Owns courier integration, shipment execution, and tracking.
+Shipment creation, pickup scheduling, tracking events, and exception
+handling. Uses a manual/sandbox courier adapter — no live Shiprocket or
+Delhivery keys required. Also exposes the public order tracking lookup.
 
 ## Responsibilities
 
-- Courier serviceability and rate selection
-- Shiprocket, Delhivery, BlueDart, and manual adapters
-- Shipment creation, AWB, labels, and pickup
-- Courier webhook verification and polling
-- Tracking timeline, delivery exceptions, and RTO
-- Manual operational overrides with audit reasons
+- Create shipments for paid/pending orders with a demo AWB (`AWB-DEMO-...`)
+  and a placeholder label URL
+- Schedule pickup, ingest tracking events (`webhook`/`poll`/`manual`), and
+  flag manual exceptions
+- Public tracking lookup by order number (`/track/{order_number}`)
 
 ## Owned data
 
-`shipments`, `shipment_events`, `courier_accounts`, `pickup_requests`,
-`delivery_exceptions`
+`courier_accounts`, `shipments`, `shipment_events`
 
-## Public contracts
+## Implementation status (VL-023 to VL-026)
 
-- `create_shipment(order_snapshot)`
-- `cancel_shipment(shipment_id)`
-- `get_tracking(order_reference)`
-- `handle_courier_webhook(...)`
-
-Consumes `payment.succeeded` or approved COD events. Publishes
-`shipment.created`, `shipment.status_changed`, and `shipment.delivered`.
+- `GET/POST /shipments`: done
+- `POST /shipments/{id}/pickup`: done
+- `POST /shipments/{id}/events`: done
+- `POST /shipments/{id}/exception`: done
+- `GET /shipments/{id}/timeline`: done
+- `GET /track/{order_number}`: done — public, no auth, returns order status
+  + shipment timeline
+- Real courier API polling/webhooks (Shiprocket/Delhivery): follow-up

@@ -82,6 +82,10 @@ class ProductMediaResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ProductMediaOrderUpdate(BaseModel):
+    media_ids: list[int] = Field(min_length=1)
+
+
 class ProductAttributeResponse(BaseModel):
     id: int
     product_id: int

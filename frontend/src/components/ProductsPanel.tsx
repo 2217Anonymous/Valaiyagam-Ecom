@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Package, Pencil, Plus, Trash2 } from "lucide-react";
+import { Package, Plus } from "lucide-react";
 
+import { ActionIconButtons } from "@/components/ActionIconButtons";
 import {
   FilterSelect,
   SelectTd,
@@ -14,6 +15,7 @@ import {
   TablePagination,
   TableToolbar,
 } from "@/components/DataTableControls";
+import { StatusPill } from "@/components/StatusPill";
 import { useRowSelection } from "@/hooks/useRowSelection";
 import { useTableState } from "@/hooks/useTableState";
 import { mediaUrl } from "@/lib/api";
@@ -344,44 +346,22 @@ export function ProductsPanel() {
                     {formatPrice(product.price)}
                   </td>
                   <td className="px-4 py-3.5">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        product.is_published
-                          ? "bg-neutral-100 text-neutral-900"
-                          : "bg-amber-50 text-amber-700"
-                      }`}
-                    >
-                      {product.is_published ? "Publish" : "Draft"}
-                    </span>
+                    <StatusPill
+                      tone={product.is_published ? "success" : "warning"}
+                      label={product.is_published ? "Publish" : "Draft"}
+                    />
                   </td>
                   <td className="px-4 py-3.5">
-                    <div className="flex justify-end gap-1">
-                      <button
-                        onClick={() =>
-                          router.push(`/products/${product.id}`)
-                        }
-                        className="icon-button rounded-lg border border-slate-200 hover:text-neutral-900"
-                        aria-label={`View ${product.name}`}
-                      >
-                        <Eye size={15} />
-                      </button>
-                      <button
-                        onClick={() =>
-                          router.push(`/products/${product.id}/edit`)
-                        }
-                        className="icon-button rounded-lg border border-slate-200 hover:text-neutral-900"
-                        aria-label={`Edit ${product.name}`}
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(product)}
-                        className="icon-button rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600"
-                        aria-label={`Delete ${product.name}`}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                    <ActionIconButtons
+                      viewLabel={`View ${product.name}`}
+                      editLabel={`Edit ${product.name}`}
+                      deleteLabel={`Delete ${product.name}`}
+                      onView={() => router.push(`/products/${product.id}`)}
+                      onEdit={() =>
+                        router.push(`/products/${product.id}/edit`)
+                      }
+                      onDelete={() => setDeleteTarget(product)}
+                    />
                   </td>
                 </tr>
               ))}

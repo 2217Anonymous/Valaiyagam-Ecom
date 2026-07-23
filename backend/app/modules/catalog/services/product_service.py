@@ -262,6 +262,22 @@ class ProductService:
         saved = self.repository.save(product)
         return self._to_response(saved)
 
+    def reorder_media(self, product_id: int, media_ids: list[int]) -> ProductResponse:
+        product = self.repository.get(product_id)
+        if not product:
+            raise NotFoundError("Product not found")
+
+        by_id = {item.id: item for item in product.media}
+        if set(media_ids) != set(by_id.keys()):
+            raise AppError("Media order must include every product image exactly once", 400)
+
+        for index, media_id in enumerate(media_ids):
+            by_id[media_id].sort_order = index
+            by_id[media_id].is_primary = index == 0
+
+        saved = self.repository.save(product)
+        return self._to_response(saved)
+
     def _sync_attributes(
         self, product: Product, attributes: list[ProductAttributeInput]
     ) -> Product:

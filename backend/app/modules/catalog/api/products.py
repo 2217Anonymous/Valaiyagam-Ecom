@@ -6,6 +6,7 @@ from app.modules.catalog.repositories.category_repository import CategoryReposit
 from app.modules.catalog.repositories.product_repository import ProductRepository
 from app.modules.catalog.schemas.product import (
     ProductCreate,
+    ProductMediaOrderUpdate,
     ProductResponse,
     ProductUpdate,
 )
@@ -78,6 +79,16 @@ def set_primary_product_media(
     product_id: int, media_id: int, db: DbSession, _: AdminUser
 ) -> ProductResponse:
     return get_service(db).set_primary_media(product_id, media_id)
+
+
+@router.put("/{product_id}/media/order", response_model=ProductResponse)
+def reorder_product_media(
+    product_id: int,
+    payload: ProductMediaOrderUpdate,
+    db: DbSession,
+    _: AdminUser,
+) -> ProductResponse:
+    return get_service(db).reorder_media(product_id, payload.media_ids)
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -13,8 +13,27 @@ from app.modules.catalog.models.product import (  # noqa: F401
     ProductMedia,
     ProductVariant,
 )
+from app.modules.fulfillment.models import (  # noqa: F401
+    CourierAccount,
+    Shipment,
+    ShipmentEvent,
+)
 from app.modules.iam.models.role import Role  # noqa: F401
 from app.modules.identity.models.user import User  # noqa: F401
+from app.modules.inventory.models import (  # noqa: F401
+    InventoryItem,
+    InventorySettings,
+    StockMovement,
+)
+from app.modules.notifications.models import Notification  # noqa: F401
+from app.modules.orders.models.address import CustomerAddress  # noqa: F401
+from app.modules.orders.models.cart import Cart, CartItem  # noqa: F401
+from app.modules.orders.models.order import (  # noqa: F401
+    Order,
+    OrderItem,
+    OrderStatusHistory,
+)
+from app.modules.payments.models import Payment, PaymentEvent, Refund  # noqa: F401
 from app.modules.settings.models import Coupon, StoreSettings, TaxRule  # noqa: F401
 
 config = context.config

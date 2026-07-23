@@ -1,21 +1,19 @@
 # Reporting Module
 
-Owns read-optimized dashboards and exports.
+Read-only KPIs and exports aggregated from `orders`, `payments`,
+`fulfillment`, and `inventory`. Owns no tables of its own.
 
 ## Responsibilities
 
-- Sales, payment, inventory, and fulfillment KPIs
-- Admin dashboard projections
-- CSV/XLSX exports
-- Scheduled client reports
+- Store-wide KPI summary (orders, revenue, paid orders, pending shipments,
+  low-stock count)
+- CSV sales export
 
 ## Owned data
 
-Reporting projections and export jobs only. Source domains remain the system of
-record for operational data.
+None.
 
-## Rules
+## Implementation status (VL-028/VL-029)
 
-- Reporting consumes events or public read contracts.
-- It must never update Orders, Payments, Catalog, or Fulfillment tables.
-- Expensive analytics queries must not run against transaction paths.
+- `GET /reports/summary`: done
+- `GET /reports/sales.csv`: done

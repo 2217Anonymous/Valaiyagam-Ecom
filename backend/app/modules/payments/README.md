@@ -1,27 +1,28 @@
 # Payments Module
 
-Owns money movement and payment provider integrations.
+Sandbox Razorpay-style payment orchestration. No real Razorpay keys are
+required — provider order/payment IDs are generated as `*_demo_*` strings.
 
 ## Responsibilities
 
-- Razorpay/Stripe payment intent or order creation
-- COD payment state
-- Signed webhook validation and idempotency
-- Capture, failure, settlement, and reconciliation
-- Partial and full refunds
-- Payment audit trail
+- Create a "Razorpay" payment intent for a pending order
+- Accept and idempotently process webhook events (`payment_events.event_id`
+  is unique, so replays are ignored)
+- Verify a demo signature via the `X-Demo-Signature: ok` header (stands in
+  for real HMAC verification)
+- On successful capture, call into `orders.OrderService.mark_paid`
+- Issue refunds and flip the order to `refunded`
 
 ## Owned data
 
-`payments`, `payment_events`, `refunds`, `webhook_receipts`,
-`reconciliation_runs`
+`payments`, `payment_events`, `refunds`
 
-## Public contracts
+## Implementation status (VL-020 to VL-022)
 
-- `create_payment(order_reference, amount)`
-- `handle_webhook(provider, payload, signature)`
-- `refund(payment_id, amount, actor)`
-- `get_payment_status(order_reference)`
-
-Consumes `order.placed`. Publishes `payment.succeeded`, `payment.failed`, and
-`payment.refunded`. Other modules must not call gateway SDKs directly.
+- `POST /payments/razorpay/create`: done
+- `POST /payments/razorpay/webhook`: done — idempotent by `event_id`, demo
+  signature header, no admin auth (webhook caller has no session)
+- `POST /payments/{id}/refund`: done
+- `GET /payments`: done
+- Real Razorpay signature (HMAC-SHA256) verification: follow-up if a live
+  integration is ever wired in

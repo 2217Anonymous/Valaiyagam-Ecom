@@ -1,11 +1,19 @@
 import { configureStore } from "@reduxjs/toolkit";
 
+import addressesReducer from "./addressesSlice";
 import authReducer from "./authSlice";
 import attributesReducer from "./attributesSlice";
+import cartReducer from "./cartSlice";
 import categoriesReducer from "./categoriesSlice";
 import couponsReducer from "./couponsSlice";
+import inventoryReducer from "./inventorySlice";
+import notificationsReducer from "./notificationsSlice";
+import ordersReducer from "./ordersSlice";
+import paymentsReducer from "./paymentsSlice";
 import productsReducer from "./productsSlice";
+import reportsReducer from "./reportsSlice";
 import rolesReducer from "./rolesSlice";
+import shipmentsReducer from "./shipmentsSlice";
 import storeSettingsReducer from "./storeSettingsSlice";
 import taxReducer from "./taxSlice";
 import toastReducer from "./toastSlice";
@@ -22,6 +30,14 @@ export const store = configureStore({
     storeSettings: storeSettingsReducer,
     tax: taxReducer,
     coupons: couponsReducer,
+    inventory: inventoryReducer,
+    cart: cartReducer,
+    addresses: addressesReducer,
+    orders: ordersReducer,
+    payments: paymentsReducer,
+    shipments: shipmentsReducer,
+    notifications: notificationsReducer,
+    reports: reportsReducer,
     toast: toastReducer,
   },
 });

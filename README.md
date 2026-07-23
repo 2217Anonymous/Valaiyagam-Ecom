@@ -92,4 +92,7 @@ uvicorn app.main:app --reload
 | `docs/MODULAR_MONOLITH_STRUCTURE.md` | Current-to-target domain folder migration plan |
 | `docs/Valaiyagam_Client_Presentation.pptx` | Client PPT (UI standards, payment, courier, tracking) |
 | `docs/PROJECT_TRACKING.xlsx` | Story tracker with IDs, dates, branches, and workflow |
+| `docs/UAT_CHECKLIST_VL030.md` | UAT script & bugfix checklist (VL-030) |
+| `docs/PROD_CUTOVER_VL031.md` | Staging → production cutover (VL-031) |
+| `docs/CLIENT_OPS_RUNBOOK_VL032.md` | Client ops runbook (VL-032) |
 | `docs/generate_client_materials.py` | Regenerates the PPT and Excel files |

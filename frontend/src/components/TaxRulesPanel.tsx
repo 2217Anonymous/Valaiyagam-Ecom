@@ -1,8 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 
+import { ActionIconButtons } from "@/components/ActionIconButtons";
 import {
   FilterSelect,
   SelectTd,
@@ -13,6 +14,7 @@ import {
   TablePagination,
   TableToolbar,
 } from "@/components/DataTableControls";
+import { StatusPill } from "@/components/StatusPill";
 import { ConfirmDialog, Modal } from "@/components/Modal";
 import { useRowSelection } from "@/hooks/useRowSelection";
 import { useTableState } from "@/hooks/useTableState";
@@ -262,33 +264,15 @@ export function TaxRulesPanel() {
                       {[row.state, row.country].filter(Boolean).join(", ") || "—"}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span
-                        className={
-                          row.is_active ? "text-emerald-700" : "text-slate-500"
-                        }
-                      >
-                        {row.is_active ? "Active" : "Inactive"}
-                      </span>
+                      <StatusPill active={row.is_active} />
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          type="button"
-                          className="icon-button border border-[var(--card-border)]"
-                          onClick={() => setFormItem(row)}
-                          aria-label={`Edit ${row.name}`}
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-button border border-[var(--card-border)] hover:text-[#f06548]"
-                          onClick={() => setDeleteTarget(row)}
-                          aria-label={`Delete ${row.name}`}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
+                      <ActionIconButtons
+                        editLabel={`Edit ${row.name}`}
+                        deleteLabel={`Delete ${row.name}`}
+                        onEdit={() => setFormItem(row)}
+                        onDelete={() => setDeleteTarget(row)}
+                      />
                     </td>
                   </tr>
                 ))

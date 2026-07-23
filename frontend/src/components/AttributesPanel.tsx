@@ -1,8 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 
+import { ActionIconButtons } from "@/components/ActionIconButtons";
 import {
   FilterSelect,
   SelectTd,
@@ -13,6 +14,7 @@ import {
   TablePagination,
   TableToolbar,
 } from "@/components/DataTableControls";
+import { StatusPill } from "@/components/StatusPill";
 import { useRowSelection } from "@/hooks/useRowSelection";
 import { useTableState } from "@/hooks/useTableState";
 import { toastError, toastSuccess } from "@/lib/toast";
@@ -214,33 +216,15 @@ export function AttributesPanel() {
                     {row.values.join(", ")}
                   </td>
                   <td className="px-4 py-3.5">
-                    <span
-                      className={`inline-flex px-2.5 py-1 text-xs font-semibold ${
-                        row.is_active
-                          ? "bg-neutral-100 text-neutral-900"
-                          : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      {row.is_active ? "Active" : "Inactive"}
-                    </span>
+                    <StatusPill active={row.is_active} />
                   </td>
                   <td className="px-4 py-3.5">
-                    <div className="flex justify-end gap-1">
-                      <button
-                        onClick={() => setFormItem(row)}
-                        className="icon-button border border-[var(--card-border)] hover:text-[var(--primary)]"
-                        aria-label={`Edit ${row.name}`}
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(row)}
-                        className="icon-button border border-[var(--card-border)] hover:text-[#f06548]"
-                        aria-label={`Delete ${row.name}`}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                    <ActionIconButtons
+                      editLabel={`Edit ${row.name}`}
+                      deleteLabel={`Delete ${row.name}`}
+                      onEdit={() => setFormItem(row)}
+                      onDelete={() => setDeleteTarget(row)}
+                    />
                   </td>
                 </tr>
               ))}

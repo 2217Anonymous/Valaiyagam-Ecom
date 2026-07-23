@@ -11,8 +11,8 @@ const toneStyles: Record<
   { wrap: string; icon: string; Icon: typeof CheckCircle2 }
 > = {
   success: {
-    wrap: "border-neutral-800 bg-neutral-900 text-white",
-    icon: "text-white",
+    wrap: "border-emerald-200 bg-emerald-50 text-emerald-950",
+    icon: "text-emerald-600",
     Icon: CheckCircle2,
   },
   error: {

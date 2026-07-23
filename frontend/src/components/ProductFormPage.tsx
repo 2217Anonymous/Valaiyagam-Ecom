@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bold,
+  GripVertical,
   ImagePlus,
   Italic,
   Link2,
@@ -25,6 +26,7 @@ import type {
   Product,
   ProductAttributeInput,
   ProductInput,
+  ProductMedia,
   ProductVariantInput,
 } from "@/lib/types";
 import { fetchAttributes } from "@/store/attributesSlice";
@@ -34,6 +36,7 @@ import {
   createProduct,
   deleteProductMedia,
   fetchProduct,
+  reorderProductMedia,
   setPrimaryProductMedia,
   updateProduct,
   uploadProductMedia,
@@ -47,6 +50,16 @@ type VariantDraft = {
   optionsText: string;
   is_active: boolean;
 };
+
+type GalleryItem =
+  | { key: string; kind: "saved"; media: ProductMedia }
+  | { key: string; kind: "pending"; file: File; url: string };
+
+let galleryKeySeq = 0;
+function nextGalleryKey(prefix: string) {
+  galleryKeySeq += 1;
+  return `${prefix}-${galleryKeySeq}`;
+}
 
 const emptyForm = {
   name: "",
@@ -193,7 +206,7 @@ export function ProductFormPage({ productId }: { productId?: number }) {
   const [busy, setBusy] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(editing);
   const [liveProduct, setLiveProduct] = useState<Product | null>(null);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [attributes, setAttributes] = useState<AttrDraft[]>([
     { name: "Size", values: "S, M, L" },
@@ -204,6 +217,7 @@ export function ProductFormPage({ productId }: { productId?: number }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const submittingRef = useRef(false);
+  const dragIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     void dispatch(fetchCategories());
@@ -224,6 +238,18 @@ export function ProductFormPage({ productId }: { productId?: number }) {
       }
       const product = result.payload;
       setLiveProduct(product);
+      setGalleryItems(
+        [...product.media]
+          .sort((a, b) => {
+            if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
+            return a.sort_order - b.sort_order || a.id - b.id;
+          })
+          .map((media) => ({
+            key: `saved-${media.id}`,
+            kind: "saved" as const,
+            media,
+          })),
+      );
       setForm({
         name: product.name,
         slug: product.slug,
@@ -274,16 +300,45 @@ export function ProductFormPage({ productId }: { productId?: number }) {
   }, [dispatch, editing, productId, router]);
 
   const shortDescCount = form.short_description.trim().length;
-  const galleryPreviews = useMemo(
-    () => imageFiles.map((file) => ({ file, url: URL.createObjectURL(file) })),
-    [imageFiles],
-  );
+  const galleryItemsRef = useRef(galleryItems);
+  galleryItemsRef.current = galleryItems;
 
   useEffect(() => {
     return () => {
-      galleryPreviews.forEach((item) => URL.revokeObjectURL(item.url));
+      galleryItemsRef.current.forEach((item) => {
+        if (item.kind === "pending") URL.revokeObjectURL(item.url);
+      });
     };
-  }, [galleryPreviews]);
+  }, []);
+
+  function syncGalleryFromProduct(product: Product) {
+    setLiveProduct(product);
+    setGalleryItems((current) => {
+      const pending = current.filter((item) => item.kind === "pending");
+      const saved = [...product.media]
+        .sort((a, b) => {
+          if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
+          return a.sort_order - b.sort_order || a.id - b.id;
+        })
+        .map((media) => ({
+          key: `saved-${media.id}`,
+          kind: "saved" as const,
+          media,
+        }));
+      return [...saved, ...pending];
+    });
+  }
+
+  function moveGalleryItem(from: number, to: number) {
+    if (from === to || from < 0 || to < 0) return;
+    setGalleryItems((current) => {
+      if (from >= current.length || to >= current.length) return current;
+      const next = [...current];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }
 
   function wrapSelection(prefix: string, suffix = prefix) {
     const el = descriptionRef.current;
@@ -399,13 +454,49 @@ export function ProductFormPage({ productId }: { productId?: number }) {
         return;
       }
 
+      let working = saved;
       let uploadFailed = 0;
-      for (const file of imageFiles) {
+      const orderedMediaIds: number[] = [];
+
+      for (const item of galleryItems) {
+        if (item.kind === "saved") {
+          orderedMediaIds.push(item.media.id);
+          continue;
+        }
         const uploadResult = await dispatch(
-          uploadProductMedia({ id: saved.id, file, altText: saved.name }),
+          uploadProductMedia({
+            id: working.id,
+            file: item.file,
+            altText: working.name,
+          }),
         );
-        if (!uploadProductMedia.fulfilled.match(uploadResult)) uploadFailed += 1;
+        if (!uploadProductMedia.fulfilled.match(uploadResult)) {
+          uploadFailed += 1;
+          continue;
+        }
+        working = uploadResult.payload;
+        const uploaded = working.media
+          .filter((media) => !orderedMediaIds.includes(media.id))
+          .sort((a, b) => b.id - a.id)[0];
+        if (uploaded) orderedMediaIds.push(uploaded.id);
       }
+
+      if (
+        orderedMediaIds.length > 0 &&
+        orderedMediaIds.length === working.media.length
+      ) {
+        const reorderResult = await dispatch(
+          reorderProductMedia({
+            productId: working.id,
+            mediaIds: orderedMediaIds,
+          }),
+        );
+        if (reorderProductMedia.fulfilled.match(reorderResult)) {
+          working = reorderResult.payload;
+        }
+      }
+
+      setLiveProduct(working);
 
       if (uploadFailed > 0) {
         toastWarning(
@@ -417,7 +508,7 @@ export function ProductFormPage({ productId }: { productId?: number }) {
         toastSuccess(
           dispatch,
           editing ? "Product updated" : "Product created",
-          `${saved.name} was saved.`,
+          `${working.name} was saved.`,
         );
       }
       router.push("/?tab=products");
@@ -427,13 +518,21 @@ export function ProductFormPage({ productId }: { productId?: number }) {
     }
   }
 
-  async function removeMedia(mediaId: number) {
-    if (!liveProduct) return;
+  async function removeGalleryItem(item: GalleryItem) {
+    if (item.kind === "pending") {
+      URL.revokeObjectURL(item.url);
+      setGalleryItems((current) => current.filter((row) => row.key !== item.key));
+      return;
+    }
+    if (!liveProduct) {
+      setGalleryItems((current) => current.filter((row) => row.key !== item.key));
+      return;
+    }
     const result = await dispatch(
-      deleteProductMedia({ productId: liveProduct.id, mediaId }),
+      deleteProductMedia({ productId: liveProduct.id, mediaId: item.media.id }),
     );
     if (deleteProductMedia.fulfilled.match(result)) {
-      setLiveProduct(result.payload);
+      syncGalleryFromProduct(result.payload);
       toastSuccess(dispatch, "Media removed");
     } else {
       toastError(dispatch, "Could not remove media");
@@ -446,7 +545,7 @@ export function ProductFormPage({ productId }: { productId?: number }) {
       setPrimaryProductMedia({ productId: liveProduct.id, mediaId }),
     );
     if (setPrimaryProductMedia.fulfilled.match(result)) {
-      setLiveProduct(result.payload);
+      syncGalleryFromProduct(result.payload);
       toastSuccess(dispatch, "Primary image updated");
     }
   }
@@ -510,11 +609,13 @@ export function ProductFormPage({ productId }: { productId?: number }) {
     );
   }
 
-  const primaryMedia =
-    liveProduct?.media.find((item) => item.is_primary) ??
-    liveProduct?.media[0] ??
-    null;
-  const primaryPreview = galleryPreviews[0];
+  const primaryItem = galleryItems[0] ?? null;
+  const primarySrc =
+    primaryItem?.kind === "pending"
+      ? primaryItem.url
+      : primaryItem?.kind === "saved"
+        ? (mediaUrl(primaryItem.media.url) ?? "")
+        : "";
 
   return (
     <>
@@ -585,14 +686,10 @@ export function ProductFormPage({ productId }: { productId?: number }) {
             <div className="mb-5">
               <FieldLabel>Product Image</FieldLabel>
               <div className="grid max-w-[120px] gap-2">
-                {primaryMedia || primaryPreview ? (
+                {primarySrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={
-                      primaryPreview
-                        ? primaryPreview.url
-                        : (mediaUrl(primaryMedia?.url) ?? "")
-                    }
+                    src={primarySrc}
                     alt="Primary product"
                     className="vz-gallery-thumb"
                   />
@@ -611,10 +708,33 @@ export function ProductFormPage({ productId }: { productId?: number }) {
 
             <div>
               <FieldLabel>Product Gallery</FieldLabel>
+              <p className="mb-2 text-xs text-[var(--muted)]">
+                Drag images to change order. First image is primary.
+              </p>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="vz-dropzone min-h-[120px] py-6"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const files = Array.from(event.dataTransfer.files ?? []).filter(
+                    (file) =>
+                      ["image/jpeg", "image/png", "image/webp"].includes(
+                        file.type,
+                      ),
+                  );
+                  if (files.length === 0) return;
+                  setGalleryItems((current) => [
+                    ...current,
+                    ...files.map((file) => ({
+                      key: nextGalleryKey("pending"),
+                      kind: "pending" as const,
+                      file,
+                      url: URL.createObjectURL(file),
+                    })),
+                  ]);
+                }}
               >
                 <UploadCloud size={22} />
                 <p className="text-sm font-semibold text-[var(--foreground)]">
@@ -630,41 +750,85 @@ export function ProductFormPage({ productId }: { productId?: number }) {
                 className="hidden"
                 onChange={(event) => {
                   const files = Array.from(event.target.files ?? []);
-                  setImageFiles((current) => [...current, ...files]);
+                  setGalleryItems((current) => [
+                    ...current,
+                    ...files.map((file) => ({
+                      key: nextGalleryKey("pending"),
+                      kind: "pending" as const,
+                      file,
+                      url: URL.createObjectURL(file),
+                    })),
+                  ]);
                   event.target.value = "";
                 }}
               />
             </div>
 
-            {(liveProduct?.media.length || 0) > 0 && (
-              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5 max-w-lg">
-                {liveProduct?.media.map((media) => {
-                  const src = mediaUrl(media.url);
+            {galleryItems.length > 0 && (
+              <div className="mt-4 grid max-w-lg grid-cols-3 gap-2 sm:grid-cols-5">
+                {galleryItems.map((item, index) => {
+                  const src =
+                    item.kind === "pending"
+                      ? item.url
+                      : (mediaUrl(item.media.url) ?? "");
+                  const isPrimary =
+                    index === 0 ||
+                    (item.kind === "saved" && item.media.is_primary);
                   return (
                     <div
-                      key={media.id}
-                      className="relative border border-[var(--card-border)]"
+                      key={item.key}
+                      draggable
+                      onDragStart={() => {
+                        dragIndexRef.current = index;
+                      }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const from = dragIndexRef.current;
+                        dragIndexRef.current = null;
+                        if (from == null) return;
+                        moveGalleryItem(from, index);
+                      }}
+                      className={`gallery-item relative ${
+                        item.kind === "pending" ? "gallery-item-pending" : ""
+                      }`}
+                      title="Drag to reorder"
                     >
+                      <span className="gallery-item-handle" aria-hidden>
+                        <GripVertical size={12} />
+                      </span>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={src ?? ""}
-                        alt={media.alt_text ?? "Product media"}
+                        src={src}
+                        alt={
+                          item.kind === "pending"
+                            ? item.file.name
+                            : (item.media.alt_text ?? "Product media")
+                        }
                         className="vz-gallery-thumb"
                       />
                       <div className="absolute inset-x-0 bottom-0 flex justify-between bg-black/55 p-1">
                         <button
                           type="button"
-                          onClick={() => void makePrimary(media.id)}
+                          onClick={() => {
+                            if (item.kind === "saved") {
+                              void makePrimary(item.media.id);
+                              return;
+                            }
+                            moveGalleryItem(index, 0);
+                          }}
                           className={`p-1 text-white ${
-                            media.is_primary ? "bg-[var(--brand)]" : ""
+                            isPrimary ? "bg-[var(--brand)]" : ""
                           }`}
+                          aria-label="Set as primary image"
                         >
                           <Star size={12} />
                         </button>
                         <button
                           type="button"
-                          onClick={() => void removeMedia(media.id)}
+                          onClick={() => void removeGalleryItem(item)}
                           className="p-1 text-white hover:bg-[#f06548]"
+                          aria-label="Remove image"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -672,24 +836,6 @@ export function ProductFormPage({ productId }: { productId?: number }) {
                     </div>
                   );
                 })}
-              </div>
-            )}
-
-            {galleryPreviews.length > 0 && (
-              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5 max-w-lg">
-                {galleryPreviews.map((item) => (
-                  <div
-                    key={item.url}
-                    className="border border-dashed border-[var(--success)]"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.url}
-                      alt={item.file.name}
-                      className="vz-gallery-thumb"
-                    />
-                  </div>
-                ))}
               </div>
             )}
           </FormCard>
@@ -880,8 +1026,9 @@ export function ProductFormPage({ productId }: { productId?: number }) {
                         current.filter((_, i) => i !== index),
                       )
                     }
-                    className="icon-button border border-[var(--card-border)] hover:text-[#f06548]"
+                    className="action-icon-btn action-icon-delete"
                     aria-label="Remove attribute"
+                    title="Remove attribute"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -993,7 +1140,9 @@ export function ProductFormPage({ productId }: { productId?: number }) {
                           current.filter((_, i) => i !== index),
                         )
                       }
-                      className="icon-button border border-[var(--card-border)] hover:text-[#f06548]"
+                      className="action-icon-btn action-icon-delete"
+                      aria-label="Remove variant"
+                      title="Remove variant"
                     >
                       <Trash2 size={15} />
                     </button>

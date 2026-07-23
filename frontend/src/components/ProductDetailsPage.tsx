@@ -298,10 +298,11 @@ export function ProductDetailsPage({ productId }: { productId: number }) {
             </div>
             <Link
               href={`/products/${product.id}/edit`}
-              className="icon-button border border-[var(--card-border)]"
+              className="action-icon-btn action-icon-edit"
               aria-label="Edit product"
+              title="Edit product"
             >
-              <Pencil size={16} />
+              <Pencil size={15} />
             </Link>
           </div>
 

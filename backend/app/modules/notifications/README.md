@@ -1,25 +1,21 @@
 # Notifications Module
 
-Owns outbound customer and staff communication.
+Demo notification dispatch (email/SMS) — no real provider is wired up;
+sending immediately marks the row `sent` and stores the rendered body.
 
 ## Responsibilities
 
-- Email, SMS, and WhatsApp provider adapters
-- Message templates and localization
-- Event-driven delivery
-- Retry, failure, and delivery status
-- Customer communication preferences
+- Queue/send templated notifications tied to an order
+- Provide a notification log for support/ops visibility
 
 ## Owned data
 
-`notification_templates`, `notification_preferences`,
-`notification_deliveries`
+`notifications`
 
-## Public contracts
+## Implementation status (VL-027)
 
-- `send(template, recipient, context)`
-- `process_domain_event(event)`
-- `get_delivery_status(id)`
-
-Consumes order, payment, and shipment events. It does not own or change those
-domains' business states.
+- `GET /notifications`: done
+- `POST /notifications/send`: done — supports `order_confirmation`,
+  `order_shipped`, `order_delivered`, `payment_received` templates plus a
+  generic fallback for unknown template keys
+- Real email/SMS provider integration (SES, Twilio, etc.): follow-up

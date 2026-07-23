@@ -4,8 +4,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
+  AlertTriangle,
+  BarChart3,
   Bell,
+  BellRing,
+  Boxes,
   ChevronDown,
+  ClipboardList,
+  FileText,
   FolderTree,
   LayoutGrid,
   LogOut,
@@ -20,8 +26,10 @@ import {
   ShoppingBag,
   Store,
   TicketPercent,
+  Truck,
   UserRound,
   Users,
+  Wrench,
 } from "lucide-react";
 
 import { logout } from "@/store/authSlice";
@@ -36,20 +44,42 @@ export type AdminNavKey =
   | "profile"
   | "shop"
   | "tax"
-  | "coupons";
+  | "invoice"
+  | "coupons"
+  | "inventory"
+  | "orders"
+  | "shipments"
+  | "exceptions"
+  | "notifications"
+  | "reports";
 
 const SIDEBAR_PIN_KEY = "valaiyagam_sidebar_pinned";
 
+const ECOMMERCE_KEYS: AdminNavKey[] = [
+  "products",
+  "categories",
+  "attributes",
+];
+
+const OPERATIONS_KEYS: AdminNavKey[] = [
+  "inventory",
+  "orders",
+  "shipments",
+  "exceptions",
+  "notifications",
+  "reports",
+];
+
+const SETTINGS_KEYS: AdminNavKey[] = [
+  "profile",
+  "shop",
+  "tax",
+  "invoice",
+  "coupons",
+];
+
 function navHref(key: AdminNavKey) {
-  if (key === "products") return "/?tab=products";
-  if (key === "categories") return "/?tab=categories";
-  if (key === "attributes") return "/?tab=attributes";
-  if (key === "roles") return "/?tab=roles";
-  if (key === "profile") return "/?tab=profile";
-  if (key === "shop") return "/?tab=shop";
-  if (key === "tax") return "/?tab=tax";
-  if (key === "coupons") return "/?tab=coupons";
-  return "/?tab=users";
+  return `/?tab=${key}`;
 }
 
 function initials(name?: string | null) {
@@ -75,6 +105,8 @@ export function AdminShell({
   const [pinned, setPinned] = useState(true);
   const [hovered, setHovered] = useState(false);
   const [ecommerceOpen, setEcommerceOpen] = useState(true);
+  const [operationsOpen, setOperationsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -85,9 +117,9 @@ export function AdminShell({
   const isProductsSection =
     activeNav === "products" || pathname.startsWith("/products");
   const isEcommerceActive =
-    isProductsSection ||
-    activeNav === "categories" ||
-    activeNav === "attributes";
+    isProductsSection || ECOMMERCE_KEYS.includes(activeNav);
+  const isOperationsActive = OPERATIONS_KEYS.includes(activeNav);
+  const isSettingsActive = SETTINGS_KEYS.includes(activeNav);
 
   useEffect(() => {
     const saved = localStorage.getItem(SIDEBAR_PIN_KEY);
@@ -102,6 +134,14 @@ export function AdminShell({
   useEffect(() => {
     if (isEcommerceActive) setEcommerceOpen(true);
   }, [isEcommerceActive]);
+
+  useEffect(() => {
+    if (isOperationsActive) setOperationsOpen(true);
+  }, [isOperationsActive]);
+
+  useEffect(() => {
+    if (isSettingsActive) setSettingsOpen(true);
+  }, [isSettingsActive]);
 
   useEffect(() => {
     function onFullscreenChange() {
@@ -197,12 +237,8 @@ export function AdminShell({
           </button>
         </div>
 
-        <nav className="flex-1 overflow-x-hidden overflow-y-auto py-4">
-          {expanded && (
-            <p className="mb-2 px-5 text-[11px] font-semibold tracking-[0.04em] text-[var(--muted)]">
-              Menu
-            </p>
-          )}
+        <nav className="flex-1 overflow-x-hidden overflow-y-auto py-3">
+          {expanded && <p className="nav-group-label">Administration</p>}
 
           <NavButton
             active={activeNav === "users"}
@@ -219,9 +255,13 @@ export function AdminShell({
             label="Roles"
           />
 
-          <button
-            type="button"
-            onClick={() => {
+          <GroupToggle
+            expanded={expanded}
+            open={ecommerceOpen}
+            active={isEcommerceActive}
+            label="Ecommerce"
+            icon={<ShoppingBag size={14} />}
+            onToggle={() => {
               if (!expanded) {
                 setPinned(true);
                 setEcommerceOpen(true);
@@ -229,25 +269,9 @@ export function AdminShell({
                 setEcommerceOpen((open) => !open);
               }
             }}
-            className={`nav-item ${isEcommerceActive ? "nav-item-active" : "nav-item-idle"} ${
-              !expanded ? "justify-center px-0" : ""
-            }`}
-            title="Ecommerce"
-          >
-            <ShoppingBag size={16} />
-            {expanded && (
-              <>
-                <span className="flex-1 text-left">Ecommerce</span>
-                <ChevronDown
-                  size={14}
-                  className={`transition ${ecommerceOpen ? "rotate-180" : ""}`}
-                />
-              </>
-            )}
-          </button>
-
+          />
           {expanded && ecommerceOpen && (
-            <div className="mb-1 ml-4 border-l border-[var(--card-border)] pl-2">
+            <div className="nav-group-panel">
               <NavButton
                 active={
                   (isProductsSection && !pathname.startsWith("/products/")) ||
@@ -285,7 +309,6 @@ export function AdminShell({
               />
             </div>
           )}
-
           {!expanded && (
             <>
               <NavButton
@@ -308,6 +331,219 @@ export function AdminShell({
                 href={tabHref("attributes")}
                 icon={<Settings2 size={16} />}
                 label="Attributes"
+              />
+            </>
+          )}
+
+          <GroupToggle
+            expanded={expanded}
+            open={operationsOpen}
+            active={isOperationsActive}
+            label="Operations"
+            icon={<Wrench size={14} />}
+            onToggle={() => {
+              if (!expanded) {
+                setPinned(true);
+                setOperationsOpen(true);
+              } else {
+                setOperationsOpen((open) => !open);
+              }
+            }}
+          />
+          {expanded && operationsOpen && (
+            <div className="nav-group-panel">
+              <NavButton
+                active={activeNav === "inventory"}
+                collapsed={false}
+                href={tabHref("inventory")}
+                icon={<Boxes size={15} />}
+                label="Inventory"
+                nested
+              />
+              <NavButton
+                active={activeNav === "orders"}
+                collapsed={false}
+                href={tabHref("orders")}
+                icon={<ClipboardList size={15} />}
+                label="Orders"
+                nested
+              />
+              <NavButton
+                active={activeNav === "shipments"}
+                collapsed={false}
+                href={tabHref("shipments")}
+                icon={<Truck size={15} />}
+                label="Shipments"
+                nested
+              />
+              <NavButton
+                active={activeNav === "exceptions"}
+                collapsed={false}
+                href={tabHref("exceptions")}
+                icon={<AlertTriangle size={15} />}
+                label="Exceptions"
+                nested
+              />
+              <NavButton
+                active={activeNav === "notifications"}
+                collapsed={false}
+                href={tabHref("notifications")}
+                icon={<BellRing size={15} />}
+                label="Notifications"
+                nested
+              />
+              <NavButton
+                active={activeNav === "reports"}
+                collapsed={false}
+                href={tabHref("reports")}
+                icon={<BarChart3 size={15} />}
+                label="Reports"
+                nested
+              />
+            </div>
+          )}
+          {!expanded && (
+            <>
+              <NavButton
+                active={activeNav === "inventory"}
+                collapsed
+                href={tabHref("inventory")}
+                icon={<Boxes size={16} />}
+                label="Inventory"
+              />
+              <NavButton
+                active={activeNav === "orders"}
+                collapsed
+                href={tabHref("orders")}
+                icon={<ClipboardList size={16} />}
+                label="Orders"
+              />
+              <NavButton
+                active={activeNav === "shipments"}
+                collapsed
+                href={tabHref("shipments")}
+                icon={<Truck size={16} />}
+                label="Shipments"
+              />
+              <NavButton
+                active={activeNav === "exceptions"}
+                collapsed
+                href={tabHref("exceptions")}
+                icon={<AlertTriangle size={16} />}
+                label="Exceptions"
+              />
+              <NavButton
+                active={activeNav === "notifications"}
+                collapsed
+                href={tabHref("notifications")}
+                icon={<BellRing size={16} />}
+                label="Notifications"
+              />
+              <NavButton
+                active={activeNav === "reports"}
+                collapsed
+                href={tabHref("reports")}
+                icon={<BarChart3 size={16} />}
+                label="Reports"
+              />
+            </>
+          )}
+
+          <GroupToggle
+            expanded={expanded}
+            open={settingsOpen}
+            active={isSettingsActive}
+            label="Settings"
+            icon={<Settings2 size={14} />}
+            onToggle={() => {
+              if (!expanded) {
+                setPinned(true);
+                setSettingsOpen(true);
+              } else {
+                setSettingsOpen((open) => !open);
+              }
+            }}
+          />
+          {expanded && settingsOpen && (
+            <div className="nav-group-panel">
+              <NavButton
+                active={activeNav === "profile"}
+                collapsed={false}
+                href={tabHref("profile")}
+                icon={<UserRound size={15} />}
+                label="Profile settings"
+                nested
+              />
+              <NavButton
+                active={activeNav === "shop"}
+                collapsed={false}
+                href={tabHref("shop")}
+                icon={<Store size={15} />}
+                label="Our shop details"
+                nested
+              />
+              <NavButton
+                active={activeNav === "tax"}
+                collapsed={false}
+                href={tabHref("tax")}
+                icon={<Percent size={15} />}
+                label="Tax"
+                nested
+              />
+              <NavButton
+                active={activeNav === "invoice"}
+                collapsed={false}
+                href={tabHref("invoice")}
+                icon={<FileText size={15} />}
+                label="Invoice"
+                nested
+              />
+              <NavButton
+                active={activeNav === "coupons"}
+                collapsed={false}
+                href={tabHref("coupons")}
+                icon={<TicketPercent size={15} />}
+                label="Coupons"
+                nested
+              />
+            </div>
+          )}
+          {!expanded && (
+            <>
+              <NavButton
+                active={activeNav === "profile"}
+                collapsed
+                href={tabHref("profile")}
+                icon={<UserRound size={16} />}
+                label="Profile settings"
+              />
+              <NavButton
+                active={activeNav === "shop"}
+                collapsed
+                href={tabHref("shop")}
+                icon={<Store size={16} />}
+                label="Our shop details"
+              />
+              <NavButton
+                active={activeNav === "tax"}
+                collapsed
+                href={tabHref("tax")}
+                icon={<Percent size={16} />}
+                label="Tax"
+              />
+              <NavButton
+                active={activeNav === "invoice"}
+                collapsed
+                href={tabHref("invoice")}
+                icon={<FileText size={16} />}
+                label="Invoice"
+              />
+              <NavButton
+                active={activeNav === "coupons"}
+                collapsed
+                href={tabHref("coupons")}
+                icon={<TicketPercent size={16} />}
+                label="Coupons"
               />
             </>
           )}
@@ -379,37 +615,23 @@ export function AdminShell({
                 </span>
               </button>
               {profileOpen && (
-                <div className="absolute right-0 mt-2 w-56 border border-[var(--card-border)] bg-white p-2">
+                <div className="absolute right-0 mt-2 w-52 border border-[var(--card-border)] bg-white p-2 shadow-sm">
                   <p className="truncate px-2 py-1 text-xs text-[var(--muted)]">
                     {currentUser?.email}
                   </p>
                   <Link
                     href="/?tab=profile"
                     onClick={() => setProfileOpen(false)}
-                    className="flex w-full items-center gap-2 px-2 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[#f3f3f9]"
+                    className="flex w-full items-center gap-2 px-2 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--theme-green-soft)] hover:text-[var(--theme-green-hover)]"
                   >
-                    <UserRound size={15} /> Profile settings
+                    <UserRound size={15} /> Profile
                   </Link>
                   <Link
                     href="/?tab=shop"
                     onClick={() => setProfileOpen(false)}
-                    className="flex w-full items-center gap-2 px-2 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[#f3f3f9]"
+                    className="flex w-full items-center gap-2 px-2 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--theme-green-soft)] hover:text-[var(--theme-green-hover)]"
                   >
-                    <Store size={15} /> Our shop details
-                  </Link>
-                  <Link
-                    href="/?tab=tax"
-                    onClick={() => setProfileOpen(false)}
-                    className="flex w-full items-center gap-2 px-2 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[#f3f3f9]"
-                  >
-                    <Percent size={15} /> Tax
-                  </Link>
-                  <Link
-                    href="/?tab=coupons"
-                    onClick={() => setProfileOpen(false)}
-                    className="flex w-full items-center gap-2 px-2 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[#f3f3f9]"
-                  >
-                    <TicketPercent size={15} /> Coupons
+                    <Settings2 size={15} /> Settings
                   </Link>
                   <button
                     type="button"
@@ -453,23 +675,17 @@ export function AdminShell({
         <MobileNav active={activeNav === "users"} href={tabHref("users")}>
           <Users size={16} /> Users
         </MobileNav>
-        <MobileNav active={activeNav === "roles"} href={tabHref("roles")}>
-          <ShieldCheck size={16} /> Roles
-        </MobileNav>
         <MobileNav active={isProductsSection} href={tabHref("products")}>
           <Package size={16} /> Products
         </MobileNav>
-        <MobileNav
-          active={activeNav === "categories"}
-          href={tabHref("categories")}
-        >
-          <FolderTree size={16} /> Categories
+        <MobileNav active={activeNav === "orders"} href={tabHref("orders")}>
+          <ClipboardList size={16} /> Orders
         </MobileNav>
-        <MobileNav
-          active={activeNav === "attributes"}
-          href={tabHref("attributes")}
-        >
-          <Settings2 size={16} /> Attributes
+        <MobileNav active={isSettingsActive} href={tabHref("profile")}>
+          <Settings2 size={16} /> Settings
+        </MobileNav>
+        <MobileNav active={activeNav === "reports"} href={tabHref("reports")}>
+          <BarChart3 size={16} /> Reports
         </MobileNav>
       </nav>
     </div>
@@ -513,6 +729,44 @@ function HeaderIconButton({
   );
 }
 
+function GroupToggle({
+  expanded,
+  open,
+  active,
+  label,
+  icon,
+  onToggle,
+}: {
+  expanded: boolean;
+  open: boolean;
+  active: boolean;
+  label: string;
+  icon: React.ReactNode;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`nav-group-toggle ${active ? "nav-group-toggle-active" : ""} ${
+        !expanded ? "justify-center px-0" : ""
+      }`}
+      title={label}
+    >
+      {icon}
+      {expanded && (
+        <>
+          <span className="flex-1 text-left">{label}</span>
+          <ChevronDown
+            size={14}
+            className={`transition ${open ? "rotate-180" : ""}`}
+          />
+        </>
+      )}
+    </button>
+  );
+}
+
 function NavButton({
   active,
   href,
@@ -532,9 +786,9 @@ function NavButton({
     <Link
       href={href}
       title={label}
-      className={`nav-item ${active ? "nav-item-active" : "nav-item-idle"} ${
-        collapsed ? "justify-center px-0" : ""
-      } ${nested ? "py-2 text-[13px]" : ""}`}
+      className={`nav-item ${nested ? "nav-item-nested" : ""} ${
+        active ? "nav-item-active" : "nav-item-idle"
+      } ${collapsed ? "justify-center px-0" : ""}`}
     >
       {icon}
       {!collapsed && <span>{label}</span>}
@@ -555,7 +809,9 @@ function MobileNav({
     <Link
       href={href}
       className={`flex flex-col items-center gap-1 px-1 py-3 text-[10px] font-semibold ${
-        active ? "bg-[#f3f3f9] text-[var(--primary)]" : "text-[var(--muted)]"
+        active
+          ? "bg-[var(--theme-green)] text-white"
+          : "text-[var(--muted)]"
       }`}
     >
       {children}
@@ -575,7 +831,14 @@ export function useAdminTabParam(defaultTab: AdminNavKey = "users"): AdminNavKey
     tab === "profile" ||
     tab === "shop" ||
     tab === "tax" ||
-    tab === "coupons"
+    tab === "invoice" ||
+    tab === "coupons" ||
+    tab === "inventory" ||
+    tab === "orders" ||
+    tab === "shipments" ||
+    tab === "exceptions" ||
+    tab === "notifications" ||
+    tab === "reports"
   ) {
     return tab;
   }
